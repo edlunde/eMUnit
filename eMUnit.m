@@ -27,7 +27,7 @@ TestEMUnitPackage::usage="TestEMUnitPackage[] runs all unit tests for the packag
 Begin["`Private`"];
 
 
-(*On[Assert]*)
+On[Assert]
 
 
 ListTests[suite_]:=suite[UnitTests]
