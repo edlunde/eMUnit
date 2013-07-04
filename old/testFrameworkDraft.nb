@@ -1,0 +1,704 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 8.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[     29342,        695]
+NotebookOptionsPosition[     28647,        665]
+NotebookOutlinePosition[     29026,        682]
+CellTagsIndexPosition[     28983,        679]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["TestFramework", "Section",
+ CellChangeTimes->{{3.5817594981464767`*^9, 3.5817595050486317`*^9}}],
+
+Cell["\<\
+Refactor format test result
+runTest only catch assert-exceptions
+write assertEquals to present both code and values of failed asserts\
+\>", "Text",
+ CellChangeTimes->{{3.581768562936214*^9, 3.581768590565977*^9}, {
+  3.581840701717978*^9, 3.58184076308335*^9}}],
+
+Cell[BoxData[
+ RowBox[{"On", "[", "Assert", "]"}]], "Input",
+ CellChangeTimes->{{3.5817594900303087`*^9, 3.5817594928586683`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"ClearAll", "[", 
+  RowBox[{"AddTest", ",", "updateTestList", ",", "shouldBeAdded"}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"SetAttributes", "[", 
+  RowBox[{"AddTest", ",", "HoldAll"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"AddTest", "[", 
+   RowBox[{"suite_", ",", "name_", ",", "test_"}], "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"suite", "[", "name", "]"}], ":=", "test"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"updateTestList", "[", 
+      RowBox[{"suite", ",", "name"}], "]"}], ";"}]}], "\[IndentingNewLine]", 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"updateTestList", "[", 
+   RowBox[{"suite_", ",", "name_"}], "]"}], ":=", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"If", "[", 
+     RowBox[{
+      RowBox[{"!", 
+       RowBox[{"ListQ", "@", 
+        RowBox[{"suite", "[", "UnitTests", "]"}]}]}], ",", 
+      RowBox[{
+       RowBox[{"suite", "[", "UnitTests", "]"}], "=", 
+       RowBox[{"{", "}"}]}]}], "]"}], ";", "\[IndentingNewLine]", 
+    RowBox[{"If", "[", 
+     RowBox[{
+      RowBox[{"shouldBeAdded", "[", 
+       RowBox[{"suite", ",", "name"}], "]"}], ",", 
+      RowBox[{"AppendTo", "[", 
+       RowBox[{
+        RowBox[{"suite", "[", "UnitTests", "]"}], ",", "name"}], "]"}]}], 
+     "]"}]}], ")"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"shouldBeAdded", "[", 
+    RowBox[{"suite_", ",", "name_"}], "]"}], ":=", 
+   RowBox[{"Not", "@", 
+    RowBox[{"MemberQ", "[", 
+     RowBox[{
+      RowBox[{"Join", "[", 
+       RowBox[{
+        RowBox[{"suite", "[", "UnitTests", "]"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"\"\<Set Up\>\"", ",", "\"\<Tear Down\>\""}], "}"}]}], "]"}],
+       ",", "name"}], "]"}]}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"ClearAll", "[", 
+  RowBox[{"RunTest", ",", "runTest"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"RunTest", "[", 
+   RowBox[{"suite_", ",", "name_"}], "]"}], ":=", 
+  RowBox[{"formatTestResult", "[", 
+   RowBox[{"{", 
+    RowBox[{"runTest", "[", 
+     RowBox[{"suite", ",", "name"}], "]"}], "}"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"runTest", "[", 
+   RowBox[{"suite_", ",", "name_"}], "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "result", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"suite", "[", "\"\<Set Up\>\"", "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"Block", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"$AssertFunction", " ", "=", " ", 
+         RowBox[{
+          RowBox[{"Throw", "[", 
+           RowBox[{"{", "##", "}"}], "]"}], "&"}]}], "}"}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"result", "=", 
+         RowBox[{"Catch", "[", 
+          RowBox[{
+           RowBox[{"suite", "[", "name", "]"}], ";"}], "]"}]}], ";"}]}], 
+      "\[IndentingNewLine]", "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"suite", "[", "\"\<Tear Down\>\"", "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"result", "===", "Null"}], ",", "\"\<Success\>\"", ",", 
+       RowBox[{"{", 
+        RowBox[{"suite", ",", "name", ",", "result"}], "}"}]}], "]"}]}]}], 
+   "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"RunTest", "[", "suite_", "]"}], ":=", 
+   RowBox[{"formatTestResult", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"runTest", "[", 
+       RowBox[{"suite", ",", "#"}], "]"}], "&"}], "/@", 
+     RowBox[{"suite", "[", "UnitTests", "]"}]}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"ClearAll", "[", "formatTestResult", "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"formatTestResult", "[", 
+   RowBox[{"result", ":", 
+    RowBox[{"{", "__", "}"}]}], "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "reportString", ",", "failures", ",", "nResults", ",", "nFailures"}], 
+     "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"nResults", "=", 
+      RowBox[{"Length", "@", "result"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"failures", "=", 
+      RowBox[{"Cases", "[", 
+       RowBox[{"result", ",", 
+        RowBox[{"Except", "[", "\"\<Success\>\"", "]"}]}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"nFailures", "=", 
+      RowBox[{"Length", "@", "failures"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"reportString", "=", 
+      RowBox[{
+       RowBox[{"ToString", "[", "nResults", "]"}], "<>", "\"\< run, \>\"", "<>", 
+       RowBox[{"ToString", "[", "nFailures", "]"}], "<>", 
+       "\"\< failed\>\""}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"nFailures", ">", "0"}], ",", 
+       RowBox[{
+        RowBox[{"reportString", "=", 
+         RowBox[{"reportString", "<>", 
+          RowBox[{"StringJoin", "@@", 
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{
+              RowBox[{"\"\<\\n\>\"", "<>", 
+               RowBox[{"ToString", "[", 
+                RowBox[{"#", "[", 
+                 RowBox[{"[", "2", "]"}], "]"}], "]"}], "<>", 
+               "\"\< - Failed: \>\"", "<>", 
+               RowBox[{"toString", "@@", 
+                RowBox[{"#", "[", 
+                 RowBox[{"[", 
+                  RowBox[{"3", ",", "1"}], "]"}], "]"}]}]}], "&"}], "/@", 
+             "failures"}], ")"}]}]}]}], ";"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"Column", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"drawBar", "[", 
+         RowBox[{"nFailures", ">", "0"}], "]"}], ",", "reportString"}], "}"}],
+       "]"}]}]}], "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"ClearAll", "[", 
+  RowBox[{"toString", ",", "drawBar"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"toString", "[", "a_", "]"}], ":=", 
+  RowBox[{"ToString", "[", 
+   RowBox[{"Unevaluated", "[", "a", "]"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"SetAttributes", "[", 
+  RowBox[{"toString", ",", "HoldAll"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"drawBar", "[", "nFailuresNonZero_", "]"}], ":=", 
+   RowBox[{"Graphics", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"If", "[", 
+        RowBox[{"nFailuresNonZero", ",", "Red", ",", "Green"}], "]"}], ",", 
+       RowBox[{"Rectangle", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}], ",", 
+         RowBox[{"{", 
+          RowBox[{"15", ",", "1"}], "}"}]}], "]"}]}], "}"}], ",", 
+     RowBox[{"Method", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<ShrinkWrap\>\"", "\[Rule]", "True"}], "}"}]}], ",", 
+     RowBox[{"ImageSize", "\[Rule]", "600"}]}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"ClearAll", "[", "DeleteTest", "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"DeleteTest", "[", 
+    RowBox[{"suite_", ",", "name_"}], "]"}], ":=", 
+   RowBox[{"(", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"suite", "[", "name", "]"}], "=."}], ";", 
+     RowBox[{
+      RowBox[{"suite", "[", "UnitTests", "]"}], "=", 
+      RowBox[{
+       RowBox[{"suite", "[", "UnitTests", "]"}], "/.", 
+       RowBox[{"name", "\[Rule]", 
+        RowBox[{"Sequence", "[", "]"}]}]}]}], ";"}], ")"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"RunTest", "[", "frameworkTests", "]"}]}], "Input",
+ CellChangeTimes->{{3.581751682417838*^9, 3.58175171205863*^9}, {
+   3.581751791047192*^9, 3.581751811248007*^9}, {3.581751990891465*^9, 
+   3.581751994996518*^9}, {3.5817520268426237`*^9, 3.581752036988277*^9}, {
+   3.5817522231361427`*^9, 3.581752235012216*^9}, {3.581752275520636*^9, 
+   3.581752284239113*^9}, {3.5817525770995626`*^9, 3.581752603513932*^9}, {
+   3.581752749688753*^9, 3.581752817446824*^9}, 3.581753100075375*^9, {
+   3.581758796254395*^9, 3.581758810500667*^9}, 3.58175908313894*^9, {
+   3.5817591331652946`*^9, 3.5817591584608383`*^9}, {3.5817592979997787`*^9, 
+   3.5817593306147346`*^9}, {3.581759584954802*^9, 3.5817595966884823`*^9}, {
+   3.581760921141323*^9, 3.581760950981489*^9}, {3.58176105074144*^9, 
+   3.581761067283774*^9}, {3.581761121574009*^9, 3.581761156330886*^9}, {
+   3.581761350272183*^9, 3.581761371934407*^9}, {3.581761408369562*^9, 
+   3.581761427754222*^9}, 3.5817614890629187`*^9, {3.58176214568643*^9, 
+   3.581762207196795*^9}, {3.5817622888374147`*^9, 3.58176237360975*^9}, {
+   3.581762434455562*^9, 3.581762477783162*^9}, {3.581762516767776*^9, 
+   3.581762599298473*^9}, {3.5817626590229692`*^9, 3.581762710537119*^9}, {
+   3.5817627452855577`*^9, 3.581762762477659*^9}, {3.581762798783149*^9, 
+   3.581762799721941*^9}, {3.5817628547476177`*^9, 3.5817631380715017`*^9}, {
+   3.581763191414329*^9, 3.581763313718836*^9}, {3.581763344089512*^9, 
+   3.581763352264701*^9}, {3.581763485452394*^9, 3.5817635211690607`*^9}, {
+   3.581763740159431*^9, 3.581763799409256*^9}, {3.581763848170765*^9, 
+   3.5817638664859133`*^9}, {3.581763969088064*^9, 3.581763997647521*^9}, {
+   3.581764063223468*^9, 3.581764065030333*^9}, {3.581764131558206*^9, 
+   3.581764197199059*^9}, {3.5817642383163843`*^9, 3.5817642462306013`*^9}, {
+   3.581764300516053*^9, 3.581764315380848*^9}, {3.581764358930759*^9, 
+   3.5817643960038977`*^9}, {3.581764616333597*^9, 3.581764801724119*^9}, {
+   3.58176486258115*^9, 3.581765057269495*^9}, {3.58176517319103*^9, 
+   3.5817652162855253`*^9}, {3.581765260393486*^9, 3.5817652681762943`*^9}, {
+   3.581765372860602*^9, 3.581765406505939*^9}, 3.581765441180126*^9, {
+   3.581765487935081*^9, 3.5817656038154373`*^9}, {3.5817657234147873`*^9, 
+   3.581765723738364*^9}, {3.581766789530594*^9, 3.58176681413173*^9}, {
+   3.581766847356596*^9, 3.5817669070044603`*^9}, {3.581840194979328*^9, 
+   3.581840197928496*^9}, {3.581840581133116*^9, 3.5818405828521*^9}, {
+   3.581840941336645*^9, 3.581840958090239*^9}, {3.5818409988817368`*^9, 
+   3.5818410276761713`*^9}, {3.5818410920091467`*^9, 3.581841151823104*^9}, {
+   3.581841391916724*^9, 3.581841459294403*^9}, {3.581841522739429*^9, 
+   3.581841577903164*^9}}],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     GraphicsBox[
+      {RGBColor[0, 1, 0], RectangleBox[{0, 0}, {15, 1}]},
+      ImageSize->600,
+      Method->{"ShrinkWrap" -> True}]},
+    {"\<\"12 run, 0 failed\"\>"}
+   },
+   DefaultBaseStyle->"Column",
+   GridBoxAlignment->{"Columns" -> {{Left}}},
+   GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
+  "Column"]], "Output",
+ CellChangeTimes->{{3.581764706742928*^9, 3.58176471809678*^9}, 
+   3.5817647724079*^9, 3.581764901293776*^9, {3.581764947544393*^9, 
+   3.5817649943493013`*^9}, {3.581765049818934*^9, 3.5817650577912693`*^9}, {
+   3.5817651968538427`*^9, 3.581765217425221*^9}, {3.581765261167141*^9, 
+   3.5817652710878077`*^9}, {3.581765352904345*^9, 3.581765399008382*^9}, {
+   3.581765431401161*^9, 3.58176544154182*^9}, 3.581765571309689*^9, 
+   3.581765604483501*^9, 3.581765724404755*^9, {3.581766855043334*^9, 
+   3.5817669075207777`*^9}, 3.5817672560814037`*^9, {3.581839240591309*^9, 
+   3.581839246262395*^9}, {3.581840089539691*^9, 3.5818401081874743`*^9}, {
+   3.5818401957921257`*^9, 3.5818402164578323`*^9}, 3.581840613276586*^9, 
+   3.581840959124464*^9, 3.581841030646956*^9, {3.581841137399803*^9, 
+   3.5818411523399963`*^9}, {3.581841418353104*^9, 3.581841460204071*^9}, {
+   3.581841557982397*^9, 3.581841579033375*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Unit tests of the framework", "Subsection",
+ CellChangeTimes->{{3.5817610240184927`*^9, 3.581761039329094*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "mytests", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"ClearAll", "[", "frameworkTests", "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{"frameworkTests", ",", "\"\<Set Up\>\"", ",", 
+       RowBox[{"ClearAll", "[", "mytests", "]"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{"frameworkTests", ",", "\"\<Tear Down\>\"", ",", 
+       RowBox[{"ClearAll", "[", "mytests", "]"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testAddSeveralTests\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+          RowBox[{"1", "+", "1"}]}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<anotherTest\>\"", ",", 
+          RowBox[{"1", "+", "2"}]}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"Assert", "[", 
+         RowBox[{
+          RowBox[{"mytests", "[", "UnitTests", "]"}], "===", 
+          RowBox[{"{", 
+           RowBox[{"\"\<aTest\>\"", ",", "\"\<anotherTest\>\""}], "}"}]}], 
+         "]"}], ";"}]}], "\[IndentingNewLine]", "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testAddTestDontEvaluateTheTest\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"i", "=", "1"}], "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+            RowBox[{"Do", "[", 
+             RowBox[{
+              RowBox[{"i", "++"}], ",", 
+              RowBox[{"{", "10", "}"}]}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"i", "===", "1"}], "]"}], ";"}]}], "\[IndentingNewLine]", 
+        "]"}]}], "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testAddingTwiceOverwrites\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+          RowBox[{"1", "+", "1"}]}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+          RowBox[{"1", "+", "2"}]}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"Assert", "[", 
+         RowBox[{
+          RowBox[{"mytests", "[", "UnitTests", "]"}], "===", 
+          RowBox[{"{", "\"\<aTest\>\"", "}"}]}], "]"}], ";"}]}], 
+      "\[IndentingNewLine]", "]"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testRunTest\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"i", "=", "1"}], "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+            RowBox[{"Do", "[", 
+             RowBox[{
+              RowBox[{"i", "++"}], ",", 
+              RowBox[{"{", "10", "}"}]}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"i", "===", "1"}], "]"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"RunTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\""}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"i", "===", "11"}], "]"}], ";"}]}], "\[IndentingNewLine]", 
+        "]"}]}], "]"}], ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testSetUp\>\"", ",", "\[IndentingNewLine]", 
+       
+       RowBox[{
+        RowBox[{
+         RowBox[{"mytests", "[", "\"\<isSetUp\>\"", "]"}], "=", "False"}], 
+        ";", "\[IndentingNewLine]", 
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<Set Up\>\"", ",", 
+          RowBox[{
+           RowBox[{"mytests", "[", "\"\<isSetUp\>\"", "]"}], "=", "True"}]}], 
+         "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"mytests", "[", "\"\<Set Up\>\"", "]"}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"Assert", "[", 
+         RowBox[{"TrueQ", "@", 
+          RowBox[{"mytests", "[", "\"\<isSetUp\>\"", "]"}]}], "]"}], ";"}]}], 
+      "\[IndentingNewLine]", "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testTearDown\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", "isStillSetUp", "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"mytests", "[", "\"\<Set Up\>\"", "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"isStillSetUp", "=", "True"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<Tear Down\>\"", ",", 
+            RowBox[{"Clear", "[", "isStillSetUp", "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"mytests", "[", "\"\<Tear Down\>\"", "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"Not", "@", 
+            RowBox[{"ValueQ", "[", "isStillSetUp", "]"}]}], "]"}], ";"}]}], 
+        "\[IndentingNewLine]", "]"}]}], "]"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testRunTestOnSuite\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"a", ",", "b", ",", "c"}], "}"}], ",", 
+         "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<test1\>\"", ",", 
+            RowBox[{"a", "=", "1"}]}], "]"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<test2\>\"", ",", 
+            RowBox[{"b", "=", "2"}]}], "]"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<test3\>\"", ",", 
+            RowBox[{"c", "=", 
+             RowBox[{"a", "+", "b"}]}]}], "]"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"RunTest", "[", "mytests", "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"a", "===", "1"}], "]"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"b", "===", "2"}], "]"}], ";", "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"c", "===", "3"}], "]"}], ";"}]}], "\[IndentingNewLine]", 
+        "]"}]}], "]"}], ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testDeleteTest\>\"", ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+          RowBox[{"a", "=", "1"}]}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"AddTest", "[", 
+         RowBox[{"mytests", ",", "\"\<anotherTest\>\"", ",", 
+          RowBox[{"b", "=", "1"}]}], "]"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"DeleteTest", "[", 
+         RowBox[{"mytests", ",", "\"\<aTest\>\""}], "]"}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"Assert", "[", 
+         RowBox[{
+          RowBox[{"mytests", "[", "UnitTests", "]"}], "===", 
+          RowBox[{"{", "\"\<anotherTest\>\"", "}"}]}], "]"}], ";"}]}], 
+      "\[IndentingNewLine]", "]"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testFormatSingleSuccessfulTestResult\>\"", 
+       ",", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", "formattedResult", "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+            RowBox[{"Assert", "[", 
+             RowBox[{"1", "\[Equal]", "1"}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"formattedResult", "=", 
+           RowBox[{"RunTest", "[", 
+            RowBox[{"mytests", ",", "\"\<aTest\>\""}], "]"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"MatchQ", "[", 
+            RowBox[{"formattedResult", ",", 
+             RowBox[{"Column", "[", 
+              RowBox[{"{", 
+               RowBox[{"_Graphics", ",", "\"\<1 run, 0 failed\>\""}], "}"}], 
+              "]"}]}], "]"}], "]"}]}]}], "\[IndentingNewLine]", "]"}]}], 
+      "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testFormatTwoSuccessfulTestResult\>\"", ",", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", "formattedResult", "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+            RowBox[{"Assert", "[", 
+             RowBox[{"1", "\[Equal]", "1"}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<anotherTest\>\"", ",", 
+            RowBox[{"Assert", "[", 
+             RowBox[{"1", "\[Equal]", "1"}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"formattedResult", "=", 
+           RowBox[{"RunTest", "[", "mytests", "]"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"MatchQ", "[", 
+            RowBox[{"formattedResult", ",", 
+             RowBox[{"Column", "[", 
+              RowBox[{"{", 
+               RowBox[{"_Graphics", ",", "\"\<2 run, 0 failed\>\""}], "}"}], 
+              "]"}]}], "]"}], "]"}]}]}], "\[IndentingNewLine]", "]"}]}], 
+      "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testFormatSingleFailedTestResult\>\"", ",", 
+       
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", "formattedResult", "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+            RowBox[{"Assert", "[", 
+             RowBox[{"1", "\[Equal]", "0"}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"formattedResult", "=", 
+           RowBox[{"RunTest", "[", 
+            RowBox[{"mytests", ",", "\"\<aTest\>\""}], "]"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"MatchQ", "[", 
+            RowBox[{"formattedResult", ",", 
+             RowBox[{"Column", "[", 
+              RowBox[{"{", 
+               RowBox[{
+               "_Graphics", ",", 
+                "\"\<1 run, 1 failed\\naTest - Failed: Assert[1 == 0]\>\""}], 
+               "}"}], "]"}]}], "]"}], "]"}]}]}], "\[IndentingNewLine]", 
+        "]"}]}], "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"AddTest", "[", 
+      RowBox[{
+      "frameworkTests", ",", "\"\<testFormatOneEachTestResult\>\"", ",", 
+       RowBox[{"Module", "[", 
+        RowBox[{
+         RowBox[{"{", "formattedResult", "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<aTest\>\"", ",", 
+            RowBox[{"Assert", "[", 
+             RowBox[{"1", "\[Equal]", "1"}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"AddTest", "[", 
+           RowBox[{"mytests", ",", "\"\<anotherTest\>\"", ",", 
+            RowBox[{"Assert", "[", 
+             RowBox[{"1", "\[Equal]", 
+              RowBox[{"-", "1"}]}], "]"}]}], "]"}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"formattedResult", "=", 
+           RowBox[{"RunTest", "[", "mytests", "]"}]}], ";", 
+          "\[IndentingNewLine]", 
+          RowBox[{"Assert", "[", 
+           RowBox[{"MatchQ", "[", 
+            RowBox[{"formattedResult", ",", 
+             RowBox[{"Column", "[", 
+              RowBox[{"{", 
+               RowBox[{
+               "_Graphics", ",", 
+                "\"\<2 run, 1 failed\\nanotherTest - Failed: Assert[1 == \
+-1]\>\""}], "}"}], "]"}]}], "]"}], "]"}]}]}], "\[IndentingNewLine]", "]"}]}], 
+      "]"}], ";"}]}], "\[IndentingNewLine]", "\[IndentingNewLine]", "]"}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"RunTest", "[", "frameworkTests", "]"}]}], "Input",
+ CellChangeTimes->{{3.581752147308057*^9, 3.581752269345086*^9}, {
+   3.5817524463580914`*^9, 3.5817525198479033`*^9}, {3.581752617858477*^9, 
+   3.58175274000907*^9}, 3.581752845364892*^9, {3.58175292455398*^9, 
+   3.581752937881198*^9}, {3.58175301610618*^9, 3.581753074761736*^9}, {
+   3.5817531077907343`*^9, 3.581753112695101*^9}, {3.581758386587553*^9, 
+   3.581758608591063*^9}, {3.5817586667183933`*^9, 3.581758717260421*^9}, {
+   3.58175875816413*^9, 3.581758787857976*^9}, {3.5817588448756638`*^9, 
+   3.581758986374629*^9}, {3.581759019808261*^9, 3.58175906110848*^9}, {
+   3.581759169270527*^9, 3.5817591695967083`*^9}, {3.581759210732971*^9, 
+   3.581759245994622*^9}, {3.581759314544998*^9, 3.5817594653292923`*^9}, {
+   3.5817595217458982`*^9, 3.5817595749906063`*^9}, {3.5817596502153587`*^9, 
+   3.581759657534216*^9}, {3.581759695565748*^9, 3.581759735374655*^9}, {
+   3.5817608010087357`*^9, 3.581760914916361*^9}, {3.581760967968861*^9, 
+   3.581760982234824*^9}, {3.58176107373951*^9, 3.581761074654367*^9}, {
+   3.58176116736045*^9, 3.581761170360293*^9}, {3.581761253658389*^9, 
+   3.581761313068255*^9}, {3.581761512873596*^9, 3.581761529515346*^9}, {
+   3.581763380842448*^9, 3.581763383696711*^9}, {3.581764284328122*^9, 
+   3.581764286974687*^9}, {3.581765109674108*^9, 3.58176513869587*^9}, {
+   3.581765425245905*^9, 3.581765425472357*^9}, {3.581767030460436*^9, 
+   3.5817670326524687`*^9}, {3.581767064204012*^9, 3.581767092315551*^9}, {
+   3.581767201186442*^9, 3.581767243923739*^9}, {3.581839980588966*^9, 
+   3.581840181247632*^9}, {3.581840222159789*^9, 3.581840261630485*^9}, {
+   3.581840320084017*^9, 3.581840351260521*^9}, {3.5818403936418657`*^9, 
+   3.581840445926674*^9}, {3.581840554377923*^9, 3.5818405605776367`*^9}, {
+   3.581840598156898*^9, 3.581840679969192*^9}, {3.581840812518845*^9, 
+   3.5818409119550123`*^9}, {3.581841051852078*^9, 3.58184105340705*^9}, {
+   3.581841747394989*^9, 3.5818417647009697`*^9}}],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     GraphicsBox[
+      {RGBColor[0, 1, 0], RectangleBox[{0, 0}, {15, 1}]},
+      ImageSize->600,
+      Method->{"ShrinkWrap" -> True}]},
+    {"\<\"12 run, 0 failed\"\>"}
+   },
+   DefaultBaseStyle->"Column",
+   GridBoxAlignment->{"Columns" -> {{Left}}},
+   GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
+  "Column"]], "Output",
+ CellChangeTimes->{
+  3.5817670928123837`*^9, {3.5817672125806723`*^9, 3.581767245229678*^9}, 
+   3.581839240689619*^9, {3.581840081501853*^9, 3.5818401256837883`*^9}, 
+   3.581840182963134*^9, 3.58184027005582*^9, {3.58184032466236*^9, 
+   3.5818403539001083`*^9}, {3.581840396684421*^9, 3.5818404488458557`*^9}, 
+   3.581840609319594*^9, {3.5818406537574377`*^9, 3.581840676310717*^9}, {
+   3.5818408789556103`*^9, 3.5818409052773867`*^9}, {3.581841037611739*^9, 
+   3.581841054278565*^9}, 3.581841766201219*^9}]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{740, 840},
+WindowMargins->{{126, Automatic}, {Automatic, 29}},
+ShowSelection->True,
+FrontEndVersion->"9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (November 20, \
+2012)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[579, 22, 102, 1, 80, "Section"],
+Cell[684, 25, 271, 6, 68, "Text"],
+Cell[958, 33, 130, 2, 28, "Input"],
+Cell[CellGroupData[{
+Cell[1113, 39, 10188, 239, 879, "Input"],
+Cell[11304, 280, 1317, 25, 75, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[12658, 310, 117, 1, 44, "Subsection"],
+Cell[CellGroupData[{
+Cell[12800, 315, 14898, 323, 1644, "Input"],
+Cell[27701, 640, 906, 20, 109, "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
