@@ -24,7 +24,8 @@ DeleteTest::usage="DeleteTest[suite, name] deletes the test from the suite.";
 
 nonexistentTest::eMUnit;
 
-RunTest::usage="RunTest[suite, name] runs a specified test and formats the output.\n\
+RunTest::usage="RunTest[suite, stringPattern] runs all tests matching stringPattern \
+and formats the output.\n\
 RunTest[suite] runs all tests in the suite and formats the output.";
 
 TestEMUnitPackage::usage="TestEMUnitPackage[] runs all unit tests \
@@ -70,11 +71,12 @@ DeleteTest[suite_, name_] := (suite[name] =.;
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
 
+RunTest[suite_, stringPattern_] := 
+ formatTestResult[runTest[suite, #] & /@ 
+  Select[ListTests[suite], StringMatchQ[#, stringPattern]&]] /; 
+    If[Or @@ (StringMatchQ[#, stringPattern] & /@ ListTests[suite]), True, 
+     Message[nonexistentTest::eMUnit, suite, stringPattern]; False]
 nonexistentTest::eMUnit = "Test '`2`' does not exist in suite '`1`'";
-RunTest[suite_, name_] := 
- formatTestResult[{runTest[suite, name]}] /; 
-  If[MemberQ[ListTests[suite], name], True, 
-   Message[nonexistentTest::eMUnit, suite, name]; False]
 RunTest[suite_] := 
  formatTestResult[runTest[suite, #] & /@ ListTests[suite]]
 
@@ -201,11 +203,19 @@ AddTest[frameworkTests, "testRunTest",
    AssertEquals[11, i];
   ]];
 
-AddTest[eMUnit`PackageTests`frameworkTests, "testRunNonexistentTest",
+AddTest[frameworkTests, "testRunNonexistentTest",
   Module[{result},
    AddTest[mytests, "aTest", 1 == 2];
    Quiet[result = RunTest[mytests, "nonexistentTest"];, nonexistentTest::eMUnit];
    AssertEquals[Unevaluated@RunTest[mytests, "nonexistentTest"], result];
+  ]];
+
+AddTest[frameworkTests, "testRunTestWithPattern",
+  Module[{i = 0},
+    AddTest[mytests, "aTest", i++]; 
+    AddTest[mytests, "anotherTest", i += 2];
+    RunTest[mytests, "a" ~~ ___ ~~ "Test"];
+    AssertEquals[3, i];
   ]];
 
 
