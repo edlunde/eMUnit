@@ -11,6 +11,10 @@ AssertEquals::usage="AssertEquals[value, expression] returns Null if expression 
 evaluates to value, throws an AssertEquals-exception to be caught by RunTest \
 otherwise."
 
+AssertTrue::usage="AssertTrue[expression] returns Null if expression \
+evaluates to True, throws an AssertTrue-exception to be caught by RunTest \
+otherwise."
+
 ListTests::usage="ListTests[suite] lists the names of all installed tests.";
 
 AddTest::usage="AddTest[suite, name, test] will add a test with a given name\
@@ -38,6 +42,12 @@ AssertEquals[shouldBe_, expr_] :=
   Throw[{HoldComplete[AssertEquals[shouldBe, expr]], expr}, "AssertEquals"]]
 
 
+SetAttributes[AssertTrue, HoldFirst]
+AssertTrue[expr_] :=
+ If[expr, Null, 
+  Throw[{HoldComplete[AssertTrue[expr]], expr}, "AssertTrue"]]
+
+
 ListTests[suite_]:=suite[UnitTests]
 
 
@@ -61,7 +71,7 @@ RunTest[suite_] :=
 
 runTest[suite_, name_] := Module[{result},
   suite["SetUp"];
-  result = Catch[suite[name];,"AssertEquals"];
+  result = Catch[suite[name];,"AssertEquals"|"AssertTrue"];
   suite["Tear Down"];
   If[result === Null, "Success", {suite, name, result}]
   ]
@@ -113,20 +123,39 @@ AddTest[frameworkTests, "Set Up", ClearAll[mytests]];
 AddTest[frameworkTests, "Tear Down", ClearAll[mytests]];
 
 
-AddTest[eMUnit`PackageTests`frameworkTests, "testAssertEqualsSuccess",
+AddTest[frameworkTests, "testAssertEqualsSuccess",
   Module[{result},
   result = Catch[AssertEquals[1, 1], "AssertEquals"] === Null;
   If[Not@result, 
    Throw[{"testAssertEqualsSuccess failed"}, "AssertEquals"]]
   ]]
 
-AddTest[eMUnit`PackageTests`frameworkTests, "testAssertEqualsThrow", 
+AddTest[frameworkTests, "testAssertEqualsThrow", 
  Module[{i, result},
   i := 2;
   result = 
    Catch[AssertEquals[1, i], 
      "AssertEquals"] === {HoldComplete[AssertEquals[1, i]], 2};
   If[Not@result, Throw[{"testAssertEqualsThrow failed"}, "AssertEquals"]]
+  ]]
+
+
+AddTest[frameworkTests, "testAssertTrueSuccess", 
+ Module[{a, result},
+  a := True;
+  result = Catch[AssertTrue[a], "AssertTrue"] === Null;
+  If[Not@result, 
+   Throw[{"testAssertTrueSuccess failed"}, "AssertEquals"]]
+  ]]
+
+AddTest[frameworkTests, "testAssertTrueFailure", 
+ Module[{a, result},
+  a := False;
+  result = 
+   Catch[AssertTrue[a], 
+     "AssertTrue"] === {HoldComplete[AssertTrue[a]], False};
+  If[Not@result, 
+   Throw[{"testAssertTrueFailure failed"}, "AssertEquals"]]
   ]]
 
 
@@ -155,15 +184,15 @@ AddTest[frameworkTests, "testRunTest",
    AssertEquals[1, i];
    RunTest[mytests, "aTest"];
    AssertEquals[11, i];
-   ]];
+  ]];
 
 
 AddTest[frameworkTests, "testSetUp",
   mytests["isSetUp"] = False;
   AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
   mytests["Set Up"];
-  AssertEquals[True, mytests["isSetUp"]];
-  ];
+  AssertTrue[mytests["isSetUp"]];
+ ];
 
 
 AddTest[frameworkTests, "testTearDown",
@@ -172,8 +201,8 @@ AddTest[frameworkTests, "testTearDown",
    isStillSetUp = True;
    AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
    mytests["Tear Down"];
-   AssertEquals[False, ValueQ[isStillSetUp]];
-   ]];
+   AssertTrue[!ValueQ[isStillSetUp]];
+  ]];
 
 
 AddTest[frameworkTests, "testRunTestOnSuite",
@@ -200,7 +229,7 @@ AddTest[frameworkTests, "testFormatSingleSuccessfulTestResult",
   Module[{formattedResult},
    AddTest[mytests, "aTest", AssertEquals[1, 1]];
    formattedResult = RunTest[mytests, "aTest"];
-   AssertEquals[True,MatchQ[formattedResult, Column[{_Graphics, "1 run, 0 failed"}]]]
+   AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "1 run, 0 failed"}]]]
   ]];
 
 AddTest[frameworkTests, "testFormatTwoSuccessfulTestResult", 
@@ -208,15 +237,14 @@ AddTest[frameworkTests, "testFormatTwoSuccessfulTestResult",
    AddTest[mytests, "aTest", AssertEquals[1, 1]];
    AddTest[mytests, "anotherTest", AssertEquals[1, 1]];
    formattedResult = RunTest[mytests];
-   AssertEquals[True,
-    MatchQ[formattedResult, Column[{_Graphics, "2 run, 0 failed"}]]
-   ]]];
+   AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "2 run, 0 failed"}]]]
+  ]];
 
 AddTest[frameworkTests, "testFormatSingleFailedTestResult", 
   Module[{formattedResult},
    AddTest[mytests, "aTest", AssertEquals[1, 0]];
    formattedResult = RunTest[mytests, "aTest"];
-   AssertEquals[True,
+   AssertTrue[
     MatchQ[formattedResult, 
      Column[{_Graphics, 
        "1 run, 1 failed\naTest - Failed: {{AssertEquals[1, 0], 0}}"}]]
@@ -227,7 +255,7 @@ AddTest[frameworkTests, "testFormatOneEachTestResult",
    AddTest[mytests, "aTest", AssertEquals[1, 1]];
    AddTest[mytests, "anotherTest", AssertEquals[1, -1]];
    formattedResult = RunTest[mytests];
-   AssertEquals[True,
+   AssertTrue[
     MatchQ[formattedResult, 
      Column[{_Graphics, 
        "2 run, 1 failed\nanotherTest - Failed: {{AssertEquals[1, -1], -1}}"}]]
