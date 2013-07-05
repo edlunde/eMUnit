@@ -9,16 +9,17 @@ BeginPackage["eMUnit`"];
 
 AssertEquals::usage="AssertEquals[value, expression] returns Null if expression \
 evaluates to value, throws an AssertEquals-exception to be caught by RunTest \
-otherwise."
+otherwise.";
 
 AssertTrue::usage="AssertTrue[expression] returns Null if expression \
 evaluates to True, throws an AssertTrue-exception to be caught by RunTest \
-otherwise."
+otherwise.";
 
 ListTests::usage="ListTests[suite] lists the names of all installed tests.";
 
 AddTest::usage="AddTest[suite, name, test] will add a test with a given name\
  to the suite.";
+nonexistentTest::eMUnit;
 
 RunTest::usage="RunTest[suite, name] runs a specified test and formats the output.\n\
 RunTest[suite] runs all tests in the suite and formats the output.";
@@ -38,7 +39,7 @@ Begin["`Private`"];
 
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := 
- If[shouldBe === expr, Null, 
+ If[Unevaluated[shouldBe] === expr, Null, 
   Throw[{HoldComplete[AssertEquals[shouldBe, expr]], expr}, "AssertEquals"]]
 
 
@@ -65,9 +66,13 @@ shouldBeAdded[suite_, name_] :=
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
-RunTest[suite_, name_] := formatTestResult[{runTest[suite, name]}]
+nonexistentTest::eMUnit = "Test '`2`' does not exist in suite '`1`'";
+RunTest[suite_, name_] := 
+ formatTestResult[{runTest[suite, name]}] /; 
+  If[MemberQ[ListTests[suite], name], True, 
+   Message[nonexistentTest::eMUnit, suite, name]; False]
 RunTest[suite_] := 
- formatTestResult[runTest[suite, #] & /@ suite[UnitTests]]
+ formatTestResult[runTest[suite, #] & /@ ListTests[suite]]
 
 runTest[suite_, name_] := Module[{result},
   suite["SetUp"];
@@ -139,6 +144,16 @@ AddTest[frameworkTests, "testAssertEqualsThrow",
   If[Not@result, Throw[{"testAssertEqualsThrow failed"}, "AssertEquals"]]
   ]]
 
+AddTest[frameworkTests, 
+  "testAssertEqualsUnevaluated",
+  Module[{result, f, i},
+   f[a_] /; (i += a; False) := Null;
+   i = 0;
+   result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
+   AssertEquals[Unevaluated@{HoldComplete[AssertEquals[f[2], f[3]]], f[3]}, result];
+   AssertEquals[3, i];
+   ]];
+
 
 AddTest[frameworkTests, "testAssertTrueSuccess", 
  Module[{a, result},
@@ -184,6 +199,13 @@ AddTest[frameworkTests, "testRunTest",
    AssertEquals[1, i];
    RunTest[mytests, "aTest"];
    AssertEquals[11, i];
+  ]];
+
+AddTest[eMUnit`PackageTests`frameworkTests, "testRunNonexistentTest",
+  Module[{result},
+   AddTest[mytests, "aTest", 1 == 2];
+   Quiet[result = RunTest[mytests, "nonexistentTest"];, nonexistentTest::eMUnit];
+   AssertEquals[Unevaluated@RunTest[mytests, "nonexistentTest"], result];
   ]];
 
 
