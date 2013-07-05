@@ -8,23 +8,24 @@ BeginPackage["eMUnit`"];
 
 
 AssertEquals::usage="AssertEquals[value, expression] returns Null if expression \
-evaluates to value, throws an AssertEquals-exception to be caught by RunTest \
-otherwise.";
+evaluates to value. Otherwise it throws an AssertEquals-exception to be caught \
+by RunTest.";
 
 AssertTrue::usage="AssertTrue[expression] returns Null if expression \
-evaluates to True, throws an AssertTrue-exception to be caught by RunTest \
-otherwise.";
+evaluates to True. Otherwise it throws an AssertTrue-exception to be caught \
+by RunTest.";
 
 ListTests::usage="ListTests[suite] lists the names of all installed tests.";
 
 AddTest::usage="AddTest[suite, name, test] will add a test with a given name\
  to the suite.";
+
+DeleteTest::usage="DeleteTest[suite, name] deletes the test from the suite.";
+
 nonexistentTest::eMUnit;
 
 RunTest::usage="RunTest[suite, name] runs a specified test and formats the output.\n\
 RunTest[suite] runs all tests in the suite and formats the output.";
-
-DeleteTest::usage="DeleteTest[suite, name] deletes the test from the suite.";
 
 TestEMUnitPackage::usage="TestEMUnitPackage[] runs all unit tests \
 for the eMUnit package.";
@@ -46,7 +47,7 @@ AssertEquals[shouldBe_, expr_] :=
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] :=
  If[expr, Null, 
-  Throw[{HoldComplete[AssertTrue[expr]], expr}, "AssertTrue"]]
+  Throw[{HoldComplete[AssertTrue[expr]]}, "AssertTrue"]]
 
 
 ListTests[suite_]:=suite[UnitTests]
@@ -57,13 +58,16 @@ AddTest[suite_, name_, test_] := Module[{},
   suite[name] := test;
   updateTestList[suite, name];
 ]
-
 updateTestList[suite_, name_] := Module[{},
   If[!ListQ@suite[UnitTests], suite[UnitTests] = {}];
   If[shouldBeAdded[suite, name], AppendTo[suite[UnitTests], name]]
 ]
 shouldBeAdded[suite_, name_] := 
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
+
+
+DeleteTest[suite_, name_] := (suite[name] =.; 
+  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
 
 nonexistentTest::eMUnit = "Test '`2`' does not exist in suite '`1`'";
@@ -75,7 +79,7 @@ RunTest[suite_] :=
  formatTestResult[runTest[suite, #] & /@ ListTests[suite]]
 
 runTest[suite_, name_] := Module[{result},
-  suite["SetUp"];
+  suite["Set Up"];
   result = Catch[suite[name];,"AssertEquals"|"AssertTrue"];
   suite["Tear Down"];
   If[result === Null, "Success", {suite, name, result}]
@@ -83,32 +87,28 @@ runTest[suite_, name_] := Module[{result},
 
 
 formatTestResult[result : {__}] :=
- Module[{reportString, failures, nResults, nFailures},
+ Module[{reportString, failures, nResults},
   nResults = Length@result;
   failures = Cases[result, Except["Success"]];
-  nFailures = Length@failures;
-  reportString = 
-   ToString[nResults] <> " run, " <> ToString[nFailures] <> 
-    " failed";
-  If[nFailures > 0, 
-   reportString = 
-     reportString <> 
-      StringJoin @@ ("\n" <> ToString[#[[2]]] <> " - Failed: " <> 
-           ToString@{toString @@@ #[[3]]} & /@ failures);];
-  Column[{drawBar[nFailures > 0], reportString}]
-  ];
-
-toString[a_] := ToString[Unevaluated[a]]
+  reportString = ToString[nResults] <> " run, " <> ToString[Length@failures] <> " failed";
+  reportString = StringJoin[{reportString, formatFailureString /@ failures}];
+  Column[{drawBar[Length@failures > 0], reportString}]
+  ]
+formatFailureString[failure_] := 
+ Module[{test, assertString, failureString},
+  test = failure[[2]];
+  assertString = toString @@ failure[[3, 1]];
+  failureString = "\n" <> test <> " - Failed " <> assertString;
+  If[Length[failure[[3]]] > 1,
+   failureString = failureString <> ", gave " <> ToString@failure[[3, 2]];];
+  failureString
+  ]
 SetAttributes[toString, HoldAll]
-
+toString[a_] := ToString[Unevaluated[a]]
 drawBar[nFailuresNonZero_] := 
  Graphics[{If[nFailuresNonZero, Red, Green], 
    Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
   ImageSize -> 600]
-
-
-DeleteTest[suite_, name_] := (suite[name] =.; 
-  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
 
 End[];
@@ -168,7 +168,7 @@ AddTest[frameworkTests, "testAssertTrueFailure",
   a := False;
   result = 
    Catch[AssertTrue[a], 
-     "AssertTrue"] === {HoldComplete[AssertTrue[a]], False};
+     "AssertTrue"] === {HoldComplete[AssertTrue[a]]};
   If[Not@result, 
    Throw[{"testAssertTrueFailure failed"}, "AssertEquals"]]
   ]]
@@ -264,12 +264,12 @@ AddTest[frameworkTests, "testFormatTwoSuccessfulTestResult",
 
 AddTest[frameworkTests, "testFormatSingleFailedTestResult", 
   Module[{formattedResult},
-   AddTest[mytests, "aTest", AssertEquals[1, 0]];
+   AddTest[mytests, "aTest", AssertTrue[False]];
    formattedResult = RunTest[mytests, "aTest"];
    AssertTrue[
     MatchQ[formattedResult, 
      Column[{_Graphics, 
-       "1 run, 1 failed\naTest - Failed: {{AssertEquals[1, 0], 0}}"}]]
+       "1 run, 1 failed\naTest - Failed AssertTrue[False]"}]]
     ]]];
 
 AddTest[frameworkTests, "testFormatOneEachTestResult", 
@@ -280,7 +280,7 @@ AddTest[frameworkTests, "testFormatOneEachTestResult",
    AssertTrue[
     MatchQ[formattedResult, 
      Column[{_Graphics, 
-       "2 run, 1 failed\nanotherTest - Failed: {{AssertEquals[1, -1], -1}}"}]]
+       "2 run, 1 failed\nanotherTest - Failed AssertEquals[1, -1], gave -1"}]]
     ]]];
 
 
