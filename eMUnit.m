@@ -22,7 +22,8 @@ AddTest::usage = "AddTest[suite, name, test] will add a test with a given name\
  to the suite. \n\
 AddTest[name, test] adds a test to the current suite.";
 
-DeleteTest::usage = "DeleteTest[suite, name] deletes a given test from the suite.";
+DeleteTest::usage = "DeleteTest[suite, name] deletes a given test from the suite.\n\
+DeleteTest[name] deletes a given test from the current suite";
 
 RunTest::usage = "RunTest[suite, stringPattern] runs all tests matching stringPattern \
 and formats the output.\n\
@@ -64,11 +65,13 @@ AssertTrue[expr_] :=
 BeginSuite[suite_] := AppendTo[suiteStack, suite]
 EndSuite[] := suiteStack = Drop[suiteStack, -1]
 currentSuite[] := suiteStack[[-1]]
-currentSuiteSetQ[] := Length[suiteStack] > 0
+currentSuiteSetQ[] := If[Length[suiteStack] > 0, True, 
+  Message[eMUnitMessages::suitNotSet]]
+eMUnitMessages::suitNotSet = "No suite set with BeginSuite[].";
 
 
+ListTests[] /; currentSuiteSetQ[] := ListTests[currentSuite[]]
 ListTests[suite_] := suite[UnitTests]
-ListTests[] := ListTests[currentSuite[]]
 
 
 SetAttributes[AddTest, HoldAll];
@@ -85,11 +88,12 @@ shouldBeAdded[suite_, name_] :=
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
+DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]
 DeleteTest[suite_, name_] := (suite[name] =.; 
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
 
-RunTest[] := RunTest[currentSuite[]]
+RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
 RunTest[suite_] := 
  formatTestResult[runTest[suite, #] & /@ ListTests[suite]]
 RunTest[suite_, stringPattern_] := 
@@ -278,10 +282,12 @@ BeginSuite[frameworkTests];
 
 
  AddTest["testDeleteTest",
-  AddTest[mytests, "aTest", a = 1];
-  AddTest[mytests, "anotherTest", b = 1];
-  DeleteTest[mytests, "aTest"];
-  AssertEquals[{"anotherTest"}, ListTests[mytests]];
+  BeginSuite[mytests];
+  AddTest["aTest", a = 1];
+  AddTest["anotherTest", b = 1];
+  DeleteTest["aTest"];
+  AssertEquals[{"anotherTest"}, ListTests[]];
+  EndSuite[];
  ];
 
 
