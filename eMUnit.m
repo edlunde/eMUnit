@@ -30,9 +30,9 @@ and formats the output.\n\
 RunTest[suite] runs all tests in the suite and formats the output.\n\
 RunTest[] runs all tests in the current suite.";
 
-BeginSuite::usage = "BeginSuite[suite] sets the current suite until next EndSuite[]."
+BeginSuite::usage = "BeginSuite[suite] sets the current suite until next EndSuite[].";
 EndSuite::usage = "EndSuite[] sets the current suite to whatever it was before the\
-last BeginSuite[]."
+last BeginSuite[].";
 
 TestEMUnitPackage::usage = "TestEMUnitPackage[] runs all unit tests \
 for the eMUnit package.";
@@ -47,9 +47,6 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-suiteStack = {};
-
-
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := 
  If[Unevaluated[shouldBe] === expr, Null, 
@@ -62,11 +59,12 @@ AssertTrue[expr_] :=
   Throw[{HoldComplete[AssertTrue[expr]]}, "AssertTrue"]]
 
 
-BeginSuite[suite_] := AppendTo[suiteStack, suite]
-EndSuite[] := suiteStack = Drop[suiteStack, -1]
+BeginSuite[suite_] := (If[!ListQ[suiteStack],suiteStack = {}]; 
+  AppendTo[suiteStack, suite])
+EndSuite[] := If[Length[suiteStack] > 0, suiteStack = Drop[suiteStack, -1]]
 currentSuite[] := suiteStack[[-1]]
 currentSuiteSetQ[] := If[Length[suiteStack] > 0, True, 
-  Message[eMUnitMessages::suitNotSet]]
+  Message[eMUnitMessages::suitNotSet]; False]
 eMUnitMessages::suitNotSet = "No suite set with BeginSuite[].";
 
 
@@ -154,6 +152,16 @@ BeginSuite[frameworkTests];
 
  AddTest["Set Up", ClearAll[mytests]];
  AddTest["Tear Down", ClearAll[mytests]];
+
+
+AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
+ Quiet[
+   BeginSuite[mytests];
+   EndSuite[];
+   EndSuite[];
+   AssertEquals[{}, $MessageList];
+   , {Drop::drop}]
+]
 
 
  AddTest["testAssertEqualsSuccess",
