@@ -55,7 +55,7 @@ AssertEquals[shouldBe_, expr_] :=
 
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] :=
- If[expr, Null, 
+ If[TrueQ@expr, Null, 
   Throw[{HoldComplete[AssertTrue[expr]]}, "AssertTrue"]]
 
 
@@ -150,8 +150,8 @@ TestEMUnitPackage[] := RunTest[frameworkTests]
 BeginSuite[frameworkTests];
 
 
- AddTest["Set Up", ClearAll[mytests]];
- AddTest["Tear Down", ClearAll[mytests]];
+AddTest["Set Up", ClearAll[mytests]];
+AddTest["Tear Down", ClearAll[mytests]];
 
 
 AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
@@ -206,6 +206,13 @@ AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
      "AssertTrue"] === {HoldComplete[AssertTrue[a]]};
   If[Not@result, 
    Throw[{"testAssertTrueFailure failed"}, "AssertEquals"]]
+  ]]
+
+AddTest["testAssertTrueUnevaluating",
+ Module[{a, result}, ClearAll[a]; 
+  result = MatchQ[Catch[AssertTrue[a], "AssertTrue"], {HoldComplete[AssertTrue[_]]}]; 
+  If[Not@result, 
+   Throw[{"testAssertTrueUnevaluating failed"}, "AssertEquals"]]
   ]]
 
 
