@@ -123,7 +123,7 @@ formatFailureString[failure_] :=
   assertString = toString @@ failure[[3, 1]];
   failureString = "\n" <> test <> " - Failed " <> assertString;
   If[Length[failure[[3]]] > 1,
-   failureString = failureString <> ", gave " <> ToString@failure[[3, 2]];];
+   failureString = failureString <> ", gave " <> ToString@failure[[3, 2]]];
   failureString
   ]
 SetAttributes[toString, HoldAll]
@@ -154,6 +154,10 @@ AddTest["Set Up", ClearAll[mytests]];
 AddTest["Tear Down", ClearAll[mytests]];
 
 
+(* ::Subsection:: *)
+(*EndSuite*)
+
+
 AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
  Quiet[
    BeginSuite[mytests];
@@ -162,6 +166,10 @@ AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
    AssertEquals[{}, $MessageList];
    , {Drop::drop}]
 ]
+
+
+(* ::Subsection:: *)
+(*AssertEquals*)
 
 
  AddTest["testAssertEqualsSuccess",
@@ -190,6 +198,10 @@ AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
   ]];
 
 
+(* ::Subsection:: *)
+(*AssertTrue*)
+
+
  AddTest["testAssertTrueSuccess", 
  Module[{a, result},
   a := True;
@@ -216,6 +228,10 @@ AddTest["testAssertTrueUnevaluating",
   ]]
 
 
+(* ::Subsection:: *)
+(*AddTest*)
+
+
  AddTest["testAddAndListTests",
   BeginSuite[mytests];
   AddTest["aTest", 1 + 1];
@@ -237,6 +253,10 @@ AddTest["testAssertTrueUnevaluating",
   AssertEquals[{"aTest"}, ListTests[]];
   EndSuite[];
  ];
+
+
+(* ::Subsection:: *)
+(*RunTest*)
 
 
  AddTest["testRunTest",
@@ -264,24 +284,6 @@ AddTest["testAssertTrueUnevaluating",
   ]];
 
 
- AddTest["testSetUp",
-  mytests["isSetUp"] = False;
-  AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
-  mytests["Set Up"];
-  AssertTrue[mytests["isSetUp"]];
- ];
-
-
- AddTest["testTearDown",
-  Module[{isStillSetUp},
-   mytests["Set Up"];
-   isStillSetUp = True;
-   AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
-   mytests["Tear Down"];
-   AssertTrue[!ValueQ[isStillSetUp]];
-  ]];
-
-
  AddTest["testRunTestOnSuite",
   Module[{a, b, c},
    BeginSuite[mytests];
@@ -296,6 +298,36 @@ AddTest["testAssertTrueUnevaluating",
   ]];
 
 
+(* ::Subsection:: *)
+(*Set Up*)
+
+
+ AddTest["testSetUp",
+  mytests["isSetUp"] = False;
+  AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
+  mytests["Set Up"];
+  AssertTrue[mytests["isSetUp"]];
+ ];
+
+
+(* ::Subsection:: *)
+(*Tear Down*)
+
+
+ AddTest["testTearDown",
+  Module[{isStillSetUp},
+   mytests["Set Up"];
+   isStillSetUp = True;
+   AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+   mytests["Tear Down"];
+   AssertTrue[!ValueQ[isStillSetUp]];
+  ]];
+
+
+(* ::Subsection:: *)
+(*DeleteTest*)
+
+
  AddTest["testDeleteTest",
   BeginSuite[mytests];
   AddTest["aTest", a = 1];
@@ -304,6 +336,10 @@ AddTest["testAssertTrueUnevaluating",
   AssertEquals[{"anotherTest"}, ListTests[]];
   EndSuite[];
  ];
+
+
+(* ::Subsection:: *)
+(*formatTestResult*)
 
 
  AddTest["testFormatSingleSuccessfulTestResult", 
@@ -323,12 +359,13 @@ AddTest["testAssertTrueUnevaluating",
 
  AddTest["testFormatSingleFailedTestResult", 
   Module[{formattedResult},
-   AddTest[mytests, "aTest", AssertTrue[False]];
+   uniqueF := False;
+   AddTest[mytests, "aTest", AssertTrue[uniqueF]];
    formattedResult = RunTest[mytests, "aTest"];
    AssertTrue[
     MatchQ[formattedResult, 
      Column[{_Graphics, 
-       "1 run, 1 failed\naTest - Failed AssertTrue[False]"}]]
+       "1 run, 1 failed\naTest - Failed AssertTrue[eMUnit`PackageTests`uniqueF]"}]]
     ]]];
 
  AddTest["testFormatOneEachTestResult", 
@@ -341,6 +378,10 @@ AddTest["testAssertTrueUnevaluating",
      Column[{_Graphics, 
        "2 run, 1 failed\nanotherTest - Failed AssertEquals[1, -1], gave -1"}]]
     ]]];
+
+
+(* ::Subsection:: *)
+(*Tail*)
 
 
 EndSuite[];
