@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Declarations*)
 
 
@@ -22,7 +22,9 @@ AddTest::usage = "AddTest[suite, name, test] will add a test with a given name\
  to the suite. \n\
 AddTest[name, test] adds a test to the current suite.";
 
-AddSuite::usage = "";
+AddSuite::usage = "AddSuite[mainSuite, subsuite] adds subsuite under mainSuite. \
+Causes all tests in subsuite to be run when those in mainSuite is.\n\
+AddSuite[subsuite] adds subsuite under the current suite.";
 
 DeleteTest::usage = "DeleteTest[suite, name] deletes a given test from the suite.\n\
 DeleteTest[name] deletes a given test from the current suite";
