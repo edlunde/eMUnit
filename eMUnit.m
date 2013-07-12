@@ -112,20 +112,20 @@ isStringOrStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr
 runTest[suite_] := runTest[suite, #] & /@ ListTests[suite]
 runTest[suite_, name_] := Module[{result},
   suite["Set Up"];
-  result = Catch[suite[name];,"AssertEquals"|"AssertTrue"];
+  result = Catch[suite[name], "AssertEquals"|"AssertTrue"];
   suite["Tear Down"];
-  If[result === Null, testResult["Success"], testResult[suite, name, result]]
+  testResult[suite, name, result]
  ]
-isFailure[result_testResult] := Not[result[[1]] === "Success"]
+isFailure[result_testResult] := Head[result[[-1]]] === HoldComplete
 
 
 formatTestResult[results : {__testResult}] :=
- Module[{reportString, failures, nResults, nFailures},
-  nResults = Length@results;
-  failures = Select[results, isFailure];
+ Module[{reportString, failures, nTests, nFailures},
+  nTests = countTests[results];
+  failures = extractFailures[results];
   nFailures = Length@failures;
   Column[Join[{drawBar[nFailures], 
-               formatSummaryString[nResults, nFailures]},
+               formatSummaryString[nTests, nFailures]},
               formatFailureString /@ failures]]
   ]
 formatSummaryString[nResults_Integer, nFailures_Integer] := 
@@ -133,16 +133,25 @@ formatSummaryString[nResults_Integer, nFailures_Integer] :=
 formatFailureString[failure_testResult] := 
  Module[{test, assertString, failureString},
   test = failure[[2]];
-  assertString = toString @@ failure[[3]];
+  assertString = replaceHoldWithToString @@ failure[[3]];
   test <> " - Failed " <> assertString <>  ", gave " <> ToString@failure[[3, 1, -1]]
  ]
-SetAttributes[toString, HoldAll]
-toString[a_] := ToString[Unevaluated[a]]
+SetAttributes[replaceHoldWithToString, HoldAll]
+replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
 drawBar[nFailures_Integer] := 
  Graphics[{If[nFailures > 0, Red, Green], 
    Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
   ImageSize -> 600]
 
+countTests[results : {__testResult}] := Length @ 
+    CasesDontEnterHold[results, res_testResult /; ! MatchQ[res[[3]], {__testResult}]]
+extractFailures[results : {__testResult}] := CasesDontEnterHold[results, _?isFailure]
+
+casesHold[HoldComplete[exp_], patt_] := HoldComplete[exp]
+casesHold[exp_, patt_] := 
+  (If[MatchQ[exp, patt], Sow[exp]]; casesHold[#, patt] & /@ exp;)
+CasesDontEnterHold[exp_, patt_] := 
+  Reap[casesHold[exp, patt]] /. Null -> Sequence[] // Flatten
 
 End[];
 
@@ -374,48 +383,68 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test formatTestResult*)
 
 
- AddTest["testFormatSingleSuccessfulTestResult", 
-  Module[{formattedResult},
-   AddTest["aTest", AssertEquals[1, 1]];
-   formattedResult = RunTest["aTest"];
-   AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "1 run, 0 failed"}]]]
-  ]];
+AddTest["testFormatSingleSuccessfulTestResult", 
+ Module[{formattedResult},
+  AddTest["aTest", AssertEquals[1, 1]];
+  formattedResult = RunTest["aTest"];
+  AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "1 run, 0 failed"}]]]
+ ]];
 
- AddTest["testFormatTwoSuccessfulTestResult", 
-  Module[{formattedResult},
-   AddTest["aTest", AssertEquals[1, 1]];
-   AddTest["anotherTest", AssertEquals[1, 1]];
-   formattedResult = RunTest[];
-   AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "2 run, 0 failed"}]]]
-  ]];
+AddTest["testFormatTwoSuccessfulTestResult", 
+ Module[{formattedResult},
+  AddTest["aTest", AssertEquals[1, 1]];
+  AddTest["anotherTest", AssertEquals[1, 1]];
+  formattedResult = RunTest[];
+  AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "2 run, 0 failed"}]]]
+ ]];
 
- AddTest["testFormatSingleFailedTestResult", 
-  Module[{formattedResult},
-   ClearAll[uniqueA]; uniqueB := False;
-   AddTest["aTest", AssertTrue[uniqueB || uniqueA]];
-   formattedResult = RunTest["aTest"];
-   AssertTrue[
-    MatchQ[formattedResult, 
-     Column[{_Graphics, 
-       "1 run, 1 failed", 
-       "aTest - Failed AssertTrue[eMUnit`PackageTests`uniqueB || \
+AddTest["testFormatSingleFailedTestResult", 
+ Module[{formattedResult},
+  ClearAll[uniqueA]; uniqueB := False;
+  AddTest["aTest", AssertTrue[uniqueB || uniqueA]];
+  formattedResult = RunTest["aTest"];
+  AssertTrue[
+   MatchQ[formattedResult, 
+    Column[{_Graphics, 
+      "1 run, 1 failed", 
+      "aTest - Failed AssertTrue[eMUnit`PackageTests`uniqueB || \
 eMUnit`PackageTests`uniqueA], gave eMUnit`PackageTests`uniqueA"}]]
-    ]]];
+   ]]];
 
- AddTest["testFormatOneEachTestResult", 
-  Module[{formattedResult},
-   AddTest["aTest", AssertEquals[1, 1]];
-   AddTest["anotherTest", AssertEquals[1, -1]];
-   formattedResult = RunTest[];
-   AssertTrue[
-    MatchQ[formattedResult, 
-     Column[{_Graphics, 
-       "2 run, 1 failed", "anotherTest - Failed AssertEquals[1, -1], gave -1"}]]
-    ]]];
+AddTest["testFormatOneEachTestResult", 
+ Module[{formattedResult},
+  AddTest["aTest", AssertEquals[1, 1]];
+  AddTest["anotherTest", AssertEquals[1, -1]];
+  formattedResult = RunTest[];
+  AssertTrue[
+   MatchQ[formattedResult, 
+    Column[{_Graphics, 
+      "2 run, 1 failed", "anotherTest - Failed AssertEquals[1, -1], gave -1"}]]
+  ]]];
+
+AddTest["testFormatHierarchicalTestResult",
+ Module[{formattedResult, level1, level2, level3, i = 0},
+  AddTest[level1, "test1.1", i++];
+  AddSuite[level1, level2];
+    AddTest[level2, "test2.1", i+=2];
+    AddTest[level2, "test2.2", i+=3; AssertEquals[1, -1]];
+    AddSuite[level2, level3];
+      AddTest[level3, "test3.1", i+=4; AssertTrue[1 < 0]];
+      AddTest[level3, "test3.2", i+=5];
+  formattedResult = RunTest[level1];
+  AssertEquals[15, i];
+  AssertTrue[
+   MatchQ[formattedResult, 
+    Column[{_Graphics, 
+      "5 run, 2 failed", 
+      "test2.2 - Failed AssertEquals[1, -1], gave -1",
+      "test3.1 - Failed AssertTrue[1 < 0], gave False"}]]
+  ]
+]]
 
 
 (* ::Section::Closed:: *)
