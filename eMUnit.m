@@ -162,8 +162,8 @@ ClearAll[frameworkTests];
 BeginSuite[frameworkTests];
 
 
-AddTest["Set Up", ClearAll[mytests]];
-AddTest["Tear Down", ClearAll[mytests]];
+AddTest["Set Up", ClearAll[mytests]; BeginSuite[mytests];];
+AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
 
 
 (* ::Subsection::Closed:: *)
@@ -173,8 +173,7 @@ AddTest["Tear Down", ClearAll[mytests]];
 AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
  Quiet[
    BeginSuite[mytests];
-   EndSuite[];
-   EndSuite[];
+   Do[EndSuite[];,{5}]
    AssertEquals[{}, $MessageList];
    , {Drop::drop}]
 ]
@@ -231,34 +230,30 @@ AddTest["testAssertTrueUnevaluating",
  ]]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test AddTest*)
 
 
  AddTest["testAddAndListTests",
-  BeginSuite[mytests];
   AddTest["aTest", 1 + 1];
-  EndSuite[];
   AddTest[mytests, "anotherTest", 1 + 2];
   AssertEquals[{"aTest", "anotherTest"}, ListTests[mytests]];
  ];
 
  AddTest["testAddTestDontEvaluateTheTest",
   Module[{i = 1},
-   AddTest[mytests, "aTest", Do[i++, {10}]];
+   AddTest["aTest", Do[i++, {10}]];
    AssertEquals[1, i];
   ]];
 
  AddTest["testAddingTwiceOverwrites",
-  BeginSuite[mytests];
   AddTest["aTest", 1 + 1];
   AddTest["aTest", 1 + 2];
   AssertEquals[{"aTest"}, ListTests[]];
-  EndSuite[];
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AddSuite*)
 
 
@@ -332,12 +327,20 @@ AddTest["testRunSubSuite", Module[{i = 0},
 (*Test Set Up*)
 
 
- AddTest["testSetUp",
-  mytests["isSetUp"] = False;
-  AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
-  mytests["Set Up"];
-  AssertTrue[mytests["isSetUp"]];
- ];
+AddTest["testSetUp",
+ mytests["isSetUp"] = False;
+ AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
+ mytests["Set Up"];
+ AssertTrue[mytests["isSetUp"]];
+];
+
+AddTest["testRunTestRunsSetUp",
+ mytests["isSetUp"] = False;
+ AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
+ AddTest[mytests, "emptyTest", Null];
+ RunTest[mytests];
+ AssertTrue[mytests["isSetUp"]];
+];
 
 
 (* ::Subsection::Closed:: *)
@@ -350,6 +353,14 @@ AddTest["testRunSubSuite", Module[{i = 0},
    isStillSetUp = True;
    AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
    mytests["Tear Down"];
+   AssertTrue[!ValueQ[isStillSetUp]];
+  ]];
+
+ AddTest["testRunTestRunsTearDown",
+  Module[{isStillSetUp},
+   AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+   AddTest[mytests, "setsUp", isStillSetUp = True];
+   RunTest[mytests, "setsUp"];
    AssertTrue[!ValueQ[isStillSetUp]];
   ]];
 
