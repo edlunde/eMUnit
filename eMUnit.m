@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Declarations*)
 
 
@@ -105,14 +105,15 @@ runTest[suite_, name_] := Module[{result},
   suite["Set Up"];
   result = Catch[suite[name];,"AssertEquals"|"AssertTrue"];
   suite["Tear Down"];
-  If[result === Null, "Success", {suite, name, result}]
+  If[result === Null, testResult["Success"], testResult[suite, name, result]]
  ]
+isFailure[result_testResult] := Not[result[[1]] === "Success"]
 
 
-formatTestResult[result : {__}] :=
+formatTestResult[results : {__testResult}] :=
  Module[{reportString, failures, nResults, nFailures},
-  nResults = Length@result;
-  failures = Cases[result, Except["Success"]];
+  nResults = Length@results;
+  failures = Select[results, isFailure];
   nFailures = Length@failures;
   Column[Join[{drawBar[nFailures], 
                formatSummaryString[nResults, nFailures]},
@@ -120,12 +121,12 @@ formatTestResult[result : {__}] :=
   ]
 formatSummaryString[nResults_Integer, nFailures_Integer] := 
   ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
-formatFailureString[failure_] := 
+formatFailureString[failure_testResult] := 
  Module[{test, assertString, failureString},
   test = failure[[2]];
   assertString = toString @@ failure[[3]];
   test <> " - Failed " <> assertString <>  ", gave " <> ToString@failure[[3, 1, -1]]
-  ]
+ ]
 SetAttributes[toString, HoldAll]
 toString[a_] := ToString[Unevaluated[a]]
 drawBar[nFailures_Integer] := 
@@ -141,12 +142,17 @@ End[];
 (*Tests*)
 
 
+(* ::Subsection:: *)
+(*Head*)
+
+
 Begin["`PackageTests`"];
 
 
 TestEMUnitPackage[] := RunTest[frameworkTests]
 
 
+ClearAll[frameworkTests];
 BeginSuite[frameworkTests];
 
 
@@ -154,7 +160,7 @@ AddTest["Set Up", ClearAll[mytests]];
 AddTest["Tear Down", ClearAll[mytests]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test EndSuite*)
 
 
@@ -168,35 +174,33 @@ AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
 ]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AssertEquals*)
 
 
- AddTest["testAssertEqualsSuccess",
-  Module[{result},
+AddTest["testAssertEqualsSuccess",
+ Module[{result},
   result = Catch[AssertEquals[1, 1], "AssertEquals"] === Null;
-  If[Not@result, 
-   Throw[{"testAssertEqualsSuccess failed"}, "AssertEquals"]]
-  ]]
+  If[Not@result, Throw[{"testAssertEqualsSuccess failed"}, "AssertEquals"]]
+ ]]
 
- AddTest["testAssertEqualsThrow", 
-  Module[{i, result},
-   i := 2;
-   result = 
-     Catch[AssertEquals[1, i], "AssertEquals"] === HoldComplete[AssertEquals[1, i]];
-   If[Not@result, Throw[{"testAssertEqualsThrow failed"}, "AssertEquals"]]
-  ]]
+AddTest["testAssertEqualsThrow", 
+ Module[{i, result},
+  i := 2;
+  result = Catch[AssertEquals[1, i], "AssertEquals"] === HoldComplete[AssertEquals[1, i]];
+  If[Not@result, Throw[{"testAssertEqualsThrow failed"}, "AssertEquals"]]
+ ]]
 
- AddTest["testAssertEqualsUnevaluated",
-  Module[{result, f, i = 0},
-   f[a_] /; (i += a; False) := Throw["This shouldn't evaluate"];
-   result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
-   AssertEquals[Unevaluated@HoldComplete[AssertEquals[f[2], f[3]]], result];
-   AssertEquals[3, i];
-  ]];
+AddTest["testAssertEqualsUnevaluated",
+ Module[{result, f, i = 0},
+  f[a_] /; (i += a; False) := Throw["This shouldn't evaluate"];
+  result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
+  AssertEquals[Unevaluated@HoldComplete[AssertEquals[f[2], f[3]]], result];
+  AssertEquals[3, i];
+ ]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AssertTrue*)
 
 
@@ -221,7 +225,7 @@ AddTest["testAssertTrueUnevaluating",
  ]]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AddTest*)
 
 
@@ -248,7 +252,7 @@ AddTest["testAssertTrueUnevaluating",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test RunTest*)
 
 
@@ -291,7 +295,7 @@ AddTest["testAssertTrueUnevaluating",
   ]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test Set Up*)
 
 
@@ -303,7 +307,7 @@ AddTest["testAssertTrueUnevaluating",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test Tear Down*)
 
 
@@ -317,7 +321,7 @@ AddTest["testAssertTrueUnevaluating",
   ]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test DeleteTest*)
 
 
@@ -331,7 +335,7 @@ AddTest["testAssertTrueUnevaluating",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test formatTestResult*)
 
 
@@ -375,7 +379,7 @@ eMUnit`PackageTests`uniqueA], gave eMUnit`PackageTests`uniqueA"}]]
     ]]];
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Tail*)
 
 
