@@ -22,6 +22,8 @@ AddTest::usage = "AddTest[suite, name, test] will add a test with a given name\
  to the suite. \n\
 AddTest[name, test] adds a test to the current suite.";
 
+AddSuite::usage = "";
+
 DeleteTest::usage = "DeleteTest[suite, name] deletes a given test from the suite.\n\
 DeleteTest[name] deletes a given test from the current suite";
 
@@ -40,7 +42,7 @@ for the eMUnit package.";
 eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit package.";
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Implementations*)
 
 
@@ -86,14 +88,17 @@ shouldBeAdded[suite_, name_] :=
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
+AddSuite[subsuite_] /; currentSuiteSetQ[] := AddSuite[currentSuite[], subsuite]
+AddSuite[mainSuite_, subsuite_] := AddTest[mainSuite, subsuite, runTest[subsuite]]
+
+
 DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]
 DeleteTest[suite_, name_] := (suite[name] =.; 
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
 
 RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
-RunTest[suite_] := 
- formatTestResult[runTest[suite, #] & /@ ListTests[suite]]
+RunTest[suite_] := formatTestResult[runTest[suite]]
 RunTest[suite_, stringPattern_StringExpression\[NonBreakingSpace]| stringPattern_String] := 
  formatTestResult[runTest[suite, #] & /@ 
   Select[ListTests[suite], StringMatchQ[#, stringPattern]&]] /; 
@@ -101,6 +106,7 @@ RunTest[suite_, stringPattern_StringExpression\[NonBreakingSpace]| stringPattern
      Message[eMUnitMessages::nonexistentTest, suite, stringPattern]; False]
 eMUnitMessages::nonexistentTest = "No test in suite '`1`' matches '`2`'";
 
+runTest[suite_] := runTest[suite, #] & /@ ListTests[suite]
 runTest[suite_, name_] := Module[{result},
   suite["Set Up"];
   result = Catch[suite[name];,"AssertEquals"|"AssertTrue"];
@@ -142,7 +148,7 @@ End[];
 (*Tests*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Head*)
 
 
@@ -250,6 +256,33 @@ AddTest["testAssertTrueUnevaluating",
   AssertEquals[{"aTest"}, ListTests[]];
   EndSuite[];
  ];
+
+
+(* ::Subsection:: *)
+(*Test AddSuite*)
+
+
+ AddTest["testAddSuite",
+  ClearAll[mySubsuite];
+  AddSuite[mytests, mySubsuite];
+  AddTest[mySubsuite, "aTest", 1+1];
+  AssertEquals[{eMUnit`PackageTests`mySubsuite}, ListTests[mytests]];
+  AssertEquals[{"aTest"}, ListTests[ListTests[mytests][[1]]]]
+ ];
+
+
+AddTest["testRunSubSuite", Module[{i = 0},
+  ClearAll[mySubsuite];
+  BeginSuite[mytests];
+  AddTest["aTest", i++]
+  AddSuite[mySubsuite];
+  AddTest[mySubsuite, "anotherTest", i+=2];
+  AddSuite[mySubsuite, mySubsubsuite];
+  AddTest[mySubsubsuite, "aThirdTest", i+=3];
+  RunTest[];
+  EndSuite[];
+  AssertEquals[6, i]
+ ]];
 
 
 (* ::Subsection::Closed:: *)
