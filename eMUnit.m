@@ -34,9 +34,14 @@ and formats the output.\n\
 RunTest[suite] runs all tests in the suite and formats the output.\n\
 RunTest[] runs all tests in the current suite.";
 
-BeginSuite::usage = "BeginSuite[suite] sets the current suite until next EndSuite[].";
+BeginSuite::usage = "BeginSuite[suite] sets the current suite until next EndSuite[].\
+It is recommended that corresponding BeginSuite and EndSuite be placed in the same cell.";
 EndSuite::usage = "EndSuite[] sets the current suite to whatever it was before the\
 last BeginSuite[].";
+
+BeginSubsuite::usage = "BeginSubsuite[subsuite] requires a suite to be set and runs\
+AddSuite[subsuite] followed by BeginSuite[subsuite]. Should be used in conjunction\
+with EndSuite[] just like BeginSuite.";
 
 TestEMUnitPackage::usage = "TestEMUnitPackage[] runs all unit tests \
 for the eMUnit package.";
@@ -44,7 +49,7 @@ for the eMUnit package.";
 eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit package.";
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Implementations*)
 
 
@@ -92,6 +97,10 @@ shouldBeAdded[suite_, name_] :=
 
 AddSuite[subsuite_] /; currentSuiteSetQ[] := AddSuite[currentSuite[], subsuite]
 AddSuite[mainSuite_, subsuite_] := AddTest[mainSuite, subsuite, runTest[subsuite]]
+
+BeginSubsuite[subsuite_] /; currentSuiteSetQ[] := 
+ (AddSuite[subsuite]; 
+  BeginSuite[subsuite])
 
 
 DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]
@@ -187,12 +196,13 @@ AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
 
 
 AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
- Quiet[
+ Block[{$MessageList = {}}, 
+  Quiet[
    BeginSuite[mytests];
-   Do[EndSuite[];,{5}]
+   Do[EndSuite[];,{5}];
    AssertEquals[{}, $MessageList];
    , {Drop::drop}]
-]
+ ]]
 
 
 (* ::Subsection::Closed:: *)
@@ -295,6 +305,20 @@ AddTest["testRunSubSuite", Module[{i = 0},
 
 
 (* ::Subsection::Closed:: *)
+(*Test BeginSubsuite*)
+
+
+AddTest["testBeginSubsuite",
+ ClearAll[mySubsuite];
+ BeginSubsuite[mySubsuite];
+ AddTest["aTest", 1+1];
+ EndSuite[];
+ AssertEquals[{eMUnit`PackageTests`mySubsuite}, ListTests[]];
+ AssertEquals[{"aTest"}, ListTests[ListTests[mytests][[1]]]]
+];
+
+
+(* ::Subsection::Closed:: *)
 (*Test RunTest*)
 
 
@@ -317,10 +341,12 @@ AddTest["testRunTestWithPattern",
  ]];
 
 AddTest["testRunTestWithNonmatchingPattern", Module[{result},
- Quiet[
-  result = RunTest[__ ~~ "nonmatchingPattern"];
- , eMUnitMessages::nonexistentTest];
- AssertEquals[{}, $MessageList];
+ Block[{$MessageList = {}}, 
+  Quiet[
+   result = RunTest[__ ~~ "nonmatchingPattern"];
+   , eMUnitMessages::nonexistentTest];
+  AssertEquals[{}, $MessageList];
+ ];
  AssertEquals[
   Unevaluated@RunTest[eMUnit`PackageTests`mytests,__~~"nonmatchingPattern"], 
   result];
@@ -343,10 +369,12 @@ AddTest["testRunTestOnParentWithStringPattern", Module[{i = 0},
   ClearAll[mySubsuite];
   AddSuite[mySubsuite];
   AddTest[mySubsuite, "aTestNotExistingInParent", i++];
-  Quiet[
-   RunTest[mytests, __~~"NotExistingInParent"];
-  , eMUnitMessages::nonexistentTest]
-  AssertEquals[{}, $MessageList];
+  Block[{$MessageList = {}}, 
+   Quiet[
+    RunTest[mytests, __~~"NotExistingInParent"];
+   , eMUnitMessages::nonexistentTest];
+   AssertEquals[{}, $MessageList];
+  ];
   AssertEquals[0, i];
   RunTest[mySubsuite, __~~"NotExistingInParent"]
   AssertEquals[1, i];
@@ -407,7 +435,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test formatTestResult*)
 
 
@@ -452,13 +480,17 @@ AddTest["testFormatOneEachTestResult",
 
 AddTest["testFormatHierarchicalTestResult",
  Module[{formattedResult, level1, level2, level3, i = 0},
-  AddTest[level1, "test1.1", i++];
-  AddSuite[level1, level2];
-    AddTest[level2, "test2.1", i+=2];
-    AddTest[level2, "test2.2", i+=3; AssertEquals[1, -1]];
-    AddSuite[level2, level3];
-      AddTest[level3, "test3.1", i+=4; AssertTrue[1 < 0]];
-      AddTest[level3, "test3.2", i+=5];
+  BeginSuite[level1];
+  AddTest["test1.1", i++];
+    BeginSubsuite[level2];
+      AddTest["test2.1", i+=2];
+      AddTest["test2.2", i+=3; AssertEquals[1, -1]];
+      BeginSubsuite[level3];
+        AddTest["test3.1", i+=4; AssertTrue[1 < 0]];
+        AddTest["test3.2", i+=5];
+      EndSuite[];
+    EndSuite[];
+  EndSuite[];
   formattedResult = RunTest[level1];
   AssertEquals[15, i];
   AssertTrue[
