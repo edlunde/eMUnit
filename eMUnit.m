@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Declarations*)
 
 
@@ -101,15 +101,17 @@ DeleteTest[suite_, name_] := (suite[name] =.;
 
 RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
 RunTest[suite_] := formatTestResult[runTest[suite]]
-RunTest[stringPattern_?isStringOrStringPatternQ] /; currentSuiteSetQ[] := RunTest[currentSuite[], stringPattern]
-RunTest[suite_, stringPattern_?isStringOrStringPatternQ] := 
- formatTestResult[runTest[suite, #] & /@ 
-  Select[ListTests[suite], StringMatchQ[#, stringPattern]&]] /; 
-    If[Or @@ (StringMatchQ[#, stringPattern] & /@ ListTests[suite]), True, 
-     Message[eMUnitMessages::nonexistentTest, suite, stringPattern]; False]
-eMUnitMessages::nonexistentTest = "No test in suite '`1`' matches '`2`'";
+RunTest[stringPattern_?isStringPatternQ] /; currentSuiteSetQ[] := RunTest[currentSuite[], stringPattern]
 
-isStringOrStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
+RunTest[suite_, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern] := 
+ formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
+selectTests[suite_, pattern_] := 
+  Select[ListTests[suite], StringQ[#] && StringMatchQ[#, pattern] &]
+testExists[suite_, pattern_] := 
+  If[Length[selectTests[suite, pattern]] > 0, True, 
+     Message[eMUnitMessages::nonexistentTest, suite, pattern]; False]
+eMUnitMessages::nonexistentTest = "No test in suite '`1`' matches '`2`'";
+isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
 
 runTest[suite_] := runTest[suite, #] & /@ ListTests[suite]
 runTest[suite_, name_] := Module[{result},
@@ -271,13 +273,13 @@ AddTest["testAssertTrueUnevaluating",
 (*Test AddSuite*)
 
 
- AddTest["testAddSuite",
-  ClearAll[mySubsuite];
-  AddSuite[mySubsuite];
-  AddTest[mySubsuite, "aTest", 1+1];
-  AssertEquals[{eMUnit`PackageTests`mySubsuite}, ListTests[]];
-  AssertEquals[{"aTest"}, ListTests[ListTests[][[1]]]]
- ];
+AddTest["testAddSuite",
+ ClearAll[mySubsuite];
+ AddSuite[mySubsuite];
+ AddTest[mySubsuite, "aTest", 1+1];
+ AssertEquals[{eMUnit`PackageTests`mySubsuite}, ListTests[]];
+ AssertEquals[{"aTest"}, ListTests[ListTests[mytests][[1]]]]
+];
 
 
 AddTest["testRunSubSuite", Module[{i = 0},
@@ -289,7 +291,7 @@ AddTest["testRunSubSuite", Module[{i = 0},
   AddTest[mySubsubsuite, "aThirdTest", i+=3];
   RunTest[];
   AssertEquals[6, i]
- ]];
+]];
 
 
 (* ::Subsection::Closed:: *)
@@ -304,19 +306,25 @@ AddTest["testRunTest",
   AssertEquals[11, i];
  ]];
 
-AddTest["testRunNonexistentTest", Module[{result},
- AddTest["aTest", 1 == 2];
- Quiet[result = RunTest[mytests, "nonexistentTest"];, eMUnitMessages::nonexistentTest];
- AssertEquals[Unevaluated@RunTest[mytests, "nonexistentTest"], result];
-]];
-
 AddTest["testRunTestWithPattern",
  Module[{i = 0},
    AddTest["aTest", i++]; 
    AddTest["anotherTest", i += 2];
+   RunTest["an" ~~ __ ~~ "Test"];
+   AssertEquals[2, i];
    RunTest["a" ~~ ___ ~~ "Test"];
-   AssertEquals[3, i];
+   AssertEquals[5, i];
  ]];
+
+AddTest["testRunTestWithNonmatchingPattern", Module[{result},
+ Quiet[
+  result = RunTest[__ ~~ "nonmatchingPattern"];
+ , eMUnitMessages::nonexistentTest];
+ AssertEquals[{}, $MessageList];
+ AssertEquals[
+  Unevaluated@RunTest[eMUnit`PackageTests`mytests,__~~"nonmatchingPattern"], 
+  result];
+]];
 
 
  AddTest["testRunTestOnSuite",
@@ -329,6 +337,20 @@ AddTest["testRunTestWithPattern",
    AssertEquals[2, b];
    AssertEquals[3, c];
   ]];
+
+
+AddTest["testRunTestOnParentWithStringPattern", Module[{i = 0},
+  ClearAll[mySubsuite];
+  AddSuite[mySubsuite];
+  AddTest[mySubsuite, "aTestNotExistingInParent", i++];
+  Quiet[
+   RunTest[mytests, __~~"NotExistingInParent"];
+  , eMUnitMessages::nonexistentTest]
+  AssertEquals[{}, $MessageList];
+  AssertEquals[0, i];
+  RunTest[mySubsuite, __~~"NotExistingInParent"]
+  AssertEquals[1, i];
+]];
 
 
 (* ::Subsection::Closed:: *)
@@ -385,7 +407,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test formatTestResult*)
 
 
