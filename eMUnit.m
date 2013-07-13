@@ -64,8 +64,7 @@ AssertEquals[shouldBe_, expr_] :=
 
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] :=
- If[TrueQ@expr, Null, 
-  Throw[HoldComplete[AssertTrue[expr]], "AssertTrue"]]
+ If[TrueQ@expr, Null, Throw[HoldComplete[AssertTrue[expr]], "AssertTrue"]]
 
 
 BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}]; 
@@ -110,10 +109,11 @@ DeleteTest[suite_, name_] := (suite[name] =.;
 
 RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
 RunTest[suite_] := formatTestResult[runTest[suite]]
-RunTest[stringPattern_?isStringPatternQ] /; currentSuiteSetQ[] := RunTest[currentSuite[], stringPattern]
+RunTest[stringPattern_?isStringPatternQ] /; currentSuiteSetQ[] := 
+  RunTest[currentSuite[], stringPattern]
 
 RunTest[suite_, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern] := 
- formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
+  formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
 selectTests[suite_, pattern_] := 
   Select[ListTests[suite], StringQ[#] && StringMatchQ[#, pattern] &]
 testExists[suite_, pattern_] := 
@@ -134,6 +134,8 @@ runTest[suite_, name_] := Module[{result},
 createTestResult[suite_, name_, result_] := testResult[suite, name, result]
 isFailure[result_testResult] := Head[result[[-1]]] === HoldComplete
 getTest[result_testResult] := result[[2]]
+getResult[result_testResult] := result[[3]]
+evaluateAssertExpr[failure_?isFailure] := failure[[3, 1, -1]]
 
 
 formatTestResult[results : {__testResult}] :=
@@ -149,9 +151,9 @@ formatSummaryString[nResults_Integer, nFailures_Integer] :=
   ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
 formatFailureString[failure_testResult] := 
  Module[{assertString, failureString},
-  assertString = replaceHoldWithToString @@ failure[[3]];
+  assertString = replaceHoldWithToString @@ getResult[failure];
   getTest[failure] <> " - Failed " <> assertString <>  
-    ", gave " <> ToString@failure[[3, 1, -1]]
+    ", gave " <> ToString@evaluateAssertExpr[failure]
  ]
 SetAttributes[replaceHoldWithToString, HoldAll]
 replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
