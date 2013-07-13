@@ -49,7 +49,7 @@ for the eMUnit package.";
 eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit package.";
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Implementations*)
 
 
@@ -127,9 +127,13 @@ runTest[suite_, name_] := Module[{result},
   suite["Set Up"];
   result = Catch[suite[name], "AssertEquals"|"AssertTrue"];
   suite["Tear Down"];
-  testResult[suite, name, result]
+  createTestResult[suite, name, result]
  ]
+
+
+createTestResult[suite_, name_, result_] := testResult[suite, name, result]
 isFailure[result_testResult] := Head[result[[-1]]] === HoldComplete
+getTest[result_testResult] := result[[2]]
 
 
 formatTestResult[results : {__testResult}] :=
@@ -144,10 +148,10 @@ formatTestResult[results : {__testResult}] :=
 formatSummaryString[nResults_Integer, nFailures_Integer] := 
   ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
 formatFailureString[failure_testResult] := 
- Module[{test, assertString, failureString},
-  test = failure[[2]];
+ Module[{assertString, failureString},
   assertString = replaceHoldWithToString @@ failure[[3]];
-  test <> " - Failed " <> assertString <>  ", gave " <> ToString@failure[[3, 1, -1]]
+  getTest[failure] <> " - Failed " <> assertString <>  
+    ", gave " <> ToString@failure[[3, 1, -1]]
  ]
 SetAttributes[replaceHoldWithToString, HoldAll]
 replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
@@ -169,7 +173,7 @@ CasesDontEnterHold[exp_, patt_] :=
 End[];
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Tests*)
 
 
@@ -435,7 +439,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test formatTestResult*)
 
 
