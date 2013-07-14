@@ -15,6 +15,9 @@ AssertTrue::usage = "AssertTrue[expression] returns Null if expression \
 evaluates to True. Otherwise it throws an AssertTrue-exception to be caught \
 by RunTest.";
 
+AssertMessage::usage = "";
+AssertNoMessage::usage = "";
+
 ListTests::usage = "ListTests[suite] lists the names of all installed tests in suite.\n\
 ListTests[] lists the tests in the current suite";
 
@@ -61,10 +64,27 @@ AssertEquals[shouldBe_, expr_] :=
  If[Unevaluated[shouldBe] === expr, Null, 
   Throw[HoldComplete[AssertEquals[shouldBe, expr]], "AssertEquals"]]
 
-
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] :=
  If[TrueQ@expr, Null, Throw[HoldComplete[AssertTrue[expr]], "AssertTrue"]]
+
+SetAttributes[{AssertNoMessage, AssertMessage}, HoldAll]
+AssertNoMessage[expr_] := AssertMessage[{}, expr]
+AssertMessage[message_MessageName | message : {}, expr_] := 
+ Module[{assertSucceeded, messageList},
+  Block[{$MessageList = {}}, 
+   Quiet[
+    expr;
+    assertSucceeded = If[Unevaluated@message === {}, 
+                         $MessageList === {}, 
+                         {HoldForm@message} === $MessageList];
+    , message];
+   messageList = $MessageList;
+  ];
+  Unprotect[$MessageList]; $MessageList = messageList; Protect[$MessageList];
+  If[assertSucceeded, Null,
+     Throw[HoldComplete[AssertMessage[message, expr]], "AssertMessage"]];
+ ]
 
 
 BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}]; 
@@ -72,8 +92,8 @@ BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}];
 EndSuite[] := If[Length[suiteStack] > 0, suiteStack = Drop[suiteStack, -1]]
 currentSuite[] := suiteStack[[-1]]
 currentSuiteSetQ[] := If[Length[suiteStack] > 0, True, 
-  Message[eMUnitMessages::suitNotSet]; False]
-eMUnitMessages::suitNotSet = "No suite set with BeginSuite[].";
+  Message[eMUnitMessages::suiteNotSet]; False]
+eMUnitMessages::suiteNotSet = "No suite set with BeginSuite[].";
 
 
 ListTests[] /; currentSuiteSetQ[] := ListTests[currentSuite[]]
@@ -197,40 +217,40 @@ AddTest["Set Up", ClearAll[mytests]; BeginSuite[mytests];];
 AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
 
 
-(* ::Subsection:: *)
-(*Test suitNotSet message*)
+(* ::Subsection::Closed:: *)
+(*Test suiteNotSet message*)
 
 
-AddTest["testSuitNotSetMessage",
- EndSuite[];
- Block[{$MessageList = {}}, 
-  Quiet[
-   AddTest["testWithoutSuite", 1+1];
-   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList]
-   , eMUnitMessages::suitNotSet];
-  AssertEquals[{}, $MessageList];
- ]
-]
-
-
-AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
+(*AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
  EndSuite[];
  AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[ListTests[]]];
  Block[{$MessageList = {}}, 
   Quiet[
    RunTest[mytests];
    AssertEquals[HoldForm@ListTests[], a];
-   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
+   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
    BeginSuite[mytests];
    RunTest[mytests];
    EndSuite[];
    AssertEquals[{"atest"}, ReleaseHold@a];
-   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
+   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
    RunTest[mytests];
-   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet], 
-                 HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
-  , eMUnitMessages::suitNotSet];
-]]]
+   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet], 
+                 HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
+  , eMUnitMessages::suiteNotSet];
+]]]*)
+
+
+AddTest["testSuiteNotSetMessage",
+ EndSuite[];
+ Block[{$MessageList = {}}, 
+  Quiet[
+   AddTest["testWithoutSuite", 1+1];
+   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList]
+   , eMUnitMessages::suiteNotSet];
+  AssertEquals[{}, $MessageList];
+ ]
+]
 
 
 (* ::Subsection::Closed:: *)
@@ -298,6 +318,79 @@ AddTest["testAssertTrueUnevaluating",
  ]]
 
 
+(* ::Subsection:: *)
+(*Test AssertMessage*)
+
+
+(* ::Text:: *)
+(*AssertNoMessage should throw differently*)
+(*test format AssertMessage*)
+(**)
+(*use to refactor runtest, suitenotset*)
+
+
+AddTest["testAssertMessageRuns", Module[{mess, i = 0},
+  mess::aMessage = "Message!";
+  Catch[AssertMessage[mess::aMessage, i++], "AssertMessage"];
+  AssertEquals[1, i];
+]]
+
+
+AddTest["testAssertNoMessage", Module[{mess, messenger, result},
+  result = Catch[AssertNoMessage[1+1]; "noThrow", "AssertMessage"];
+  AssertEquals["noThrow", result];
+  mess::aMessage = "Message!";
+  messenger := Message[mess::aMessage];
+  Quiet[
+    result = Catch[AssertNoMessage[messenger]; "noThrow", "AssertMessage"];
+  , mess::aMessage];
+  AssertEquals[HoldComplete[AssertMessage[{}, messenger]], result];
+]]
+
+AddTest["testAssertMessageCorrectMessage", Module[{mess, messenger, result},
+  mess::aMessage = "Message!";
+  messenger := Message[mess::aMessage];
+  result = Catch[AssertMessage[mess::aMessage, messenger]; "noThrow", "AssertMessage"];
+  AssertEquals["noThrow", result];
+]]
+
+AddTest["testAssertMessageThrows", Module[{mess, result},
+  mess::aMessage = "Message!";
+  result = Catch[AssertMessage[mess::aMessage, "noMessage"], "AssertMessage"];
+  AssertEquals[HoldComplete[AssertMessage[mess::aMessage, "noMessage"]], result];
+]]
+
+
+AddTest["testAssertMessageQuiet", 
+  EndSuite[];
+  Block[{$MessageList = {}}, 
+   Quiet[
+    Catch[AssertMessage[eMUnitMessages::suiteNotSet, ListTests[]], "AssertMessage"];
+    AssertEquals[{}, $MessageList];
+   , eMUnitMessages::suiteNotSet];
+]]
+AddTest["testAssertMessageNotQuietOther",
+  EndSuite[];
+  Block[{$MessageList = {}}, 
+   Quiet[
+    Catch[AssertMessage[eMUnitMessages::nonexistentTest, ListTests[]]
+        , "AssertMessage"];
+    AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
+   , eMUnitMessages::suiteNotSet];
+]]
+
+
+AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result},
+  mess::aMessage = "Message!";
+  messenger := Message[mess::aMessage];
+  Quiet[
+   messenger;
+   result = Catch[AssertMessage[mess::aMessage, messenger], "AssertMessage"];
+  , mess::aMessage];
+  AssertEquals[Null, result];
+]]
+
+
 (* ::Subsection::Closed:: *)
 (*Test AddTest*)
 
@@ -360,7 +453,7 @@ AddTest["testBeginSubsuite",
 ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test RunTest*)
 
 
