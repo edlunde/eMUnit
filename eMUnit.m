@@ -213,6 +213,23 @@ AddTest["testSuitNotSetMessage",
 ]
 
 
+AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
+ EndSuite[];
+ AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[ListTests[]]];
+ Block[{$MessageList = {}}, 
+  Quiet[
+   RunTest[mytests];
+   AssertEquals[HoldForm@ListTests[], a];
+   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
+   BeginSuite[mytests];
+   RunTest[mytests];
+   EndSuite[];
+   AssertEquals[{"atest"}, a];
+   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
+  , eMUnitMessages::suitNotSet];
+]]]
+
+
 (* ::Subsection::Closed:: *)
 (*Test EndSuite*)
 
