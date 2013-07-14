@@ -224,8 +224,11 @@ AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
    BeginSuite[mytests];
    RunTest[mytests];
    EndSuite[];
-   AssertEquals[{"atest"}, a];
+   AssertEquals[{"atest"}, ReleaseHold@a];
    AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
+   RunTest[mytests];
+   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet], 
+                 HoldForm[eMUnitMessages::suitNotSet]}, $MessageList];
   , eMUnitMessages::suitNotSet];
 ]]]
 
