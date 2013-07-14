@@ -175,7 +175,7 @@ CasesDontEnterHold[exp_, patt_] :=
 End[];
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Tests*)
 
 
@@ -195,6 +195,22 @@ BeginSuite[frameworkTests];
 
 AddTest["Set Up", ClearAll[mytests]; BeginSuite[mytests];];
 AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
+
+
+(* ::Subsection:: *)
+(*Test suitNotSet message*)
+
+
+AddTest["testSuitNotSetMessage",
+ EndSuite[];
+ Block[{$MessageList = {}}, 
+  Quiet[
+   AddTest["testWithoutSuite", 1+1];
+   AssertEquals[{HoldForm[eMUnitMessages::suitNotSet]}, $MessageList]
+   , eMUnitMessages::suitNotSet];
+  AssertEquals[{}, $MessageList];
+ ]
+]
 
 
 (* ::Subsection::Closed:: *)
@@ -324,7 +340,7 @@ AddTest["testBeginSubsuite",
 ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test RunTest*)
 
 
@@ -350,6 +366,7 @@ AddTest["testRunTestWithNonmatchingPattern", Module[{result},
  Block[{$MessageList = {}}, 
   Quiet[
    result = RunTest[__ ~~ "nonmatchingPattern"];
+   AssertEquals[{HoldForm[eMUnitMessages::nonexistentTest]}, $MessageList]
    , eMUnitMessages::nonexistentTest];
   AssertEquals[{}, $MessageList];
  ];
@@ -378,6 +395,7 @@ AddTest["testRunTestOnParentWithStringPattern", Module[{i = 0},
   Block[{$MessageList = {}}, 
    Quiet[
     RunTest[mytests, __~~"NotExistingInParent"];
+    AssertEquals[{HoldForm[eMUnitMessages::nonexistentTest]}, $MessageList]
    , eMUnitMessages::nonexistentTest];
    AssertEquals[{}, $MessageList];
   ];
