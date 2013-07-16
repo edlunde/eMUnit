@@ -199,11 +199,14 @@ End[];
 (*Tests*)
 
 
+Begin["`PackageTests`"];
+
+
+throwSomething[text_] := Throw[HoldComplete[{"", text}], "AssertEquals"]
+
+
 (* ::Subsection::Closed:: *)
 (*Head*)
-
-
-Begin["`PackageTests`"];
 
 
 TestEMUnitPackage[] := RunTest[frameworkTests]
@@ -274,14 +277,14 @@ AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
 AddTest["testAssertEqualsSuccess",
  Module[{result},
   result = Catch[AssertEquals[1, 1], "AssertEquals"] === Null;
-  If[Not@result, Throw[{"testAssertEqualsSuccess failed"}, "AssertEquals"]]
+  If[Not@result, throwSomething["testAssertEqualsSuccess failed"]]
  ]]
 
 AddTest["testAssertEqualsThrow", 
  Module[{i, result},
   i := 2;
   result = Catch[AssertEquals[1, i], "AssertEquals"] === HoldComplete[AssertEquals[1, i]];
-  If[Not@result, Throw[{"testAssertEqualsThrow failed"}, "AssertEquals"]]
+  If[Not@result, throwSomething["testAssertEqualsThrow failed"]]
  ]]
 
 AddTest["testAssertEqualsUnevaluated",
@@ -301,32 +304,25 @@ AddTest["testAssertTrueSuccess",
  Module[{a, result},
   a := True;
   result = Catch[AssertTrue[a], "AssertTrue"] === Null;
-  If[Not@result, Throw[{"testAssertTrueSuccess failed"}, "AssertEquals"]]
+  If[Not@result, throwSomething["testAssertTrueSuccess failed"]]
  ]]
 
 AddTest["testAssertTrueFailure", 
  Module[{a, result},
   a := False;
   result = Catch[AssertTrue[a], "AssertTrue"] === HoldComplete[AssertTrue[a]];
-  If[Not@result, Throw[{"testAssertTrueFailure failed"}, "AssertEquals"]]
+  If[Not@result, throwSomething["testAssertTrueFailure failed"]]
  ]]
 
 AddTest["testAssertTrueUnevaluating",
  Module[{a, result}, ClearAll[a]; 
   result = MatchQ[Catch[AssertTrue[a], "AssertTrue"], HoldComplete[AssertTrue[_]]]; 
-  If[Not@result, Throw[{"testAssertTrueUnevaluating failed"}, "AssertEquals"]]
+  If[Not@result, throwSomething["testAssertTrueUnevaluating failed"]]
  ]]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AssertMessage*)
-
-
-(* ::Text:: *)
-(*AssertNoMessage should throw differently*)
-(*test format AssertMessage*)
-(**)
-(*use to refactor runtest, suitenotset*)
 
 
 AddTest["testAssertMessageRuns", Module[{mess, i = 0},
