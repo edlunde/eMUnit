@@ -60,13 +60,14 @@ Begin["`Private`"];
 
 
 SetAttributes[AssertEquals, HoldRest]
-AssertEquals[shouldBe_, expr_] := 
- If[Unevaluated[shouldBe] === expr, Null, 
-  Throw[HoldComplete[AssertEquals[shouldBe, expr]], "AssertEquals"]]
+AssertEquals[shouldBe_, expr_] := Module[{evaluated = expr},
+  If[Unevaluated[shouldBe] === evaluated, Null, 
+  throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
 SetAttributes[AssertTrue, HoldFirst]
-AssertTrue[expr_] :=
- If[TrueQ@expr, Null, Throw[HoldComplete[AssertTrue[expr]], "AssertTrue"]]
+AssertTrue[expr_] := Module[{evaluated = expr},
+ If[TrueQ@evaluated, Null, 
+    throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
 SetAttributes[{AssertNoMessage, AssertMessage}, HoldAll]
 AssertNoMessage[expr_] := AssertMessage[{}, expr]
@@ -83,8 +84,23 @@ AssertMessage[message_MessageName | message : {}, expr_] :=
   ];
   Unprotect[$MessageList]; $MessageList = messageList; Protect[$MessageList];
   If[assertSucceeded, Null,
-     Throw[HoldComplete[AssertMessage[message, expr]], "AssertMessage"]];
+     throwAssertException["AssertMessage", AssertMessage[message, expr], messageList]];
  ]
+
+SetAttributes[throwAssertException, HoldRest];
+throwAssertException[name_?isAssertExceptionName, expr_, res_] := 
+   Throw[HoldComplete[expr], name]
+isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
+assertExceptionNames = {"AssertEquals", "AssertTrue", "AssertMessage"};
+
+createTestResult[suite_, name_, result_] := testResult[suite, name, result]
+isFailure[result_testResult] := Head[result[[3]]] === HoldComplete
+getTest[result_testResult] := result[[2]]
+getResultString[failure_?isFailure] := replaceHoldWithToString @@ failure[[3]]
+getEvaluatedAssertExpr[failure_?isFailure] := Catch[Quiet[failure[[3, 1, -1]]]]
+
+SetAttributes[replaceHoldWithToString, HoldAll]
+replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
 
 
 BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}]; 
@@ -145,17 +161,10 @@ isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
 runTest[suite_] := runTest[suite, #] & /@ ListTests[suite]
 runTest[suite_, name_] := Module[{result},
   suite["Set Up"];
-  result = Catch[suite[name], "AssertEquals"|"AssertTrue"];
+  result = Catch[suite[name], exceptionName_?isAssertExceptionName];
   suite["Tear Down"];
   createTestResult[suite, name, result]
  ]
-
-
-createTestResult[suite_, name_, result_] := testResult[suite, name, result]
-isFailure[result_testResult] := Head[result[[-1]]] === HoldComplete
-getTest[result_testResult] := result[[2]]
-getResult[result_testResult] := result[[3]]
-evaluateAssertExpr[failure_?isFailure] := failure[[3, 1, -1]]
 
 
 formatTestResult[results : {__testResult}] :=
@@ -171,12 +180,10 @@ formatSummaryString[nResults_Integer, nFailures_Integer] :=
   ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
 formatFailureString[failure_testResult] := 
  Module[{assertString, failureString},
-  assertString = replaceHoldWithToString @@ getResult[failure];
+  assertString = getResultString[failure];
   getTest[failure] <> " - Failed " <> assertString <>  
-    ", gave " <> ToString@evaluateAssertExpr[failure]
+    ", gave " <> ToString@getEvaluatedAssertExpr[failure]
  ]
-SetAttributes[replaceHoldWithToString, HoldAll]
-replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
 drawBar[nFailures_Integer] := 
  Graphics[{If[nFailures > 0, Red, Green], 
    Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
@@ -387,7 +394,7 @@ AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result
 ]]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test AddTest*)
 
 
