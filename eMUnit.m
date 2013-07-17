@@ -63,7 +63,7 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Asserts*)
 
 
@@ -112,7 +112,7 @@ SetAttributes[replaceHoldWithToString, HoldAll]
 replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Begin, List, Add, Delete*)
 
 
@@ -173,13 +173,13 @@ DeleteTest[suite_Symbol, name_] := (suite[name] =.;
 (*RunTest*)
 
 
-RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
+RunTest[] := runIfSuiteSet[RunTest[currentSuite[]]]
 RunTest[suite_Symbol] := formatTestResult[runTest[suite]]
-RunTest[stringPattern_?isStringPatternQ] /; currentSuiteSetQ[] := 
-  RunTest[currentSuite[], stringPattern]
+RunTest[stringPattern_?isStringPatternQ] := 
+  runIfSuiteSet[RunTest[currentSuite[], stringPattern]]
 
-RunTest[suite_Symbol, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern] := 
-  formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
+RunTest[suite_Symbol, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern]:= 
+    formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
 selectTests[suite_Symbol, pattern_] := 
   Select[ListTests[suite], StringQ[#] && StringMatchQ[#, pattern] &]
 testExists[suite_Symbol, pattern_] := 
@@ -250,7 +250,7 @@ throwSomething[text_] :=
   eMUnit`Private`throwAssertException["AssertEquals", text, ""]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Head*)
 
 
@@ -261,8 +261,8 @@ ClearAll[frameworkTests];
 BeginSuite[frameworkTests];
 
 
-AddTest["Set Up", ClearAll[mytests]; BeginSuite[mytests];];
-AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
+AddTest["Set Up", ClearAll[mytests, anotherSuite]; BeginSuite[mytests];];
+AddTest["Tear Down", EndSuite[]; ClearAll[mytests, anotherSuite]];
 
 
 (* ::Subsection::Closed:: *)
@@ -273,7 +273,7 @@ AddTest["testAssertEqualsSuccess",
  Module[{result},
   result = Catch[AssertEquals[1, 1], "AssertEquals"] === Null;
   If[Not@result, throwSomething["testAssertEqualsSuccess failed"]]
- ]]
+ ]];
 
 AddTest["testAssertEqualsThrow", 
  Module[{i, result},
@@ -282,7 +282,7 @@ AddTest["testAssertEqualsThrow",
   If[result === eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
      Null,
      throwSomething["testAssertEqualsThrow failed"]]
- ]]
+ ]];
 
 AddTest["testAssertEqualsUnevaluated",
  Module[{result, f, i = 0},
@@ -447,18 +447,14 @@ AddTest["testRunSubSuite", Module[{i = 0},
 AddTest["testSuiteNotSetMessage",
  EndSuite[];
  AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
-]
+];
 
 
 AddTest["testEndSuiteEmptyStack",
   BeginSuite[mytests];
   Do[EndSuite[];,{5}];
   AssertNoMessage[EndSuite[]];
-]
-
-
-(* ::Subsection:: *)
-(**)
+];
 
 
 (* 
@@ -492,27 +488,36 @@ runExtract[]
 *)
 
 (* ListTests, AddTest, AddSuite, BeginSubsuite, DeleteTest, RunTests (both)  *)
-Function[{name, expr, result},
+addRecheckCurrentSuiteTest = Function[{name, expr, result},
  AddTest["testCurrentSuiteRecheck" <> name, Module[{a = "notTouched (just checkin)"},
    EndSuite[];
    AddTest[mytests, "atest", a = expr];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-   AssertEquals[Null, a];
-   BeginSuite[mytests];
+   AssertEquals[Null, Unevaluated@a];(*holdform*)
+   BeginSuite[anotherSuite];
    AssertNoMessage[RunTest[mytests]];
    EndSuite[];
    AssertEquals[result, a];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- ]], HoldAll] @@@ Unevaluated[{
-  {"ListTests", ListTests[], {"atest"}},
+ ]], HoldAll];
+addRecheckCurrentSuiteTest @@@ Unevaluated[{
+  {"ListTests", ListTests[], anotherSuite[eMUnit`Private`UnitTests]},
   {"AddTest", AddTest["anotherTest", 1+1], "anotherTest"},
   {"AddSuite", AddSuite[someSubsuite], someSubsuite},
   {"BeginSubsuite", 
-   Module[{temp = BeginSubsuite[someSubsuite]}, EndSuite[]; temp], 
-   {mytests, someSubsuite}},
+   Module[{temp}, temp = BeginSubsuite[someSubsuite];
+     If[!temp===Null, EndSuite[]; DeleteTest[someSubsuite]];
+     temp], 
+   {anotherSuite, someSubsuite}},
   {"DeleteTest", 
-   (AddTest[mytests, "anotherTest", 1+1]; DeleteTest["anotherTest"]), 
-    "anotherTest"}
+   (AddTest[anotherSuite, "anotherTest", 1+1]; DeleteTest["anotherTest"]), 
+    "anotherTest"},
+  {"RunTest", 
+   (AddTest[anotherSuite, "anotherTest", 1+1]; RunTest[]),
+    Column[{eMUnit`Private`drawBar[0], "1 run, 0 failed"}]},
+  {"RunTestPattern", 
+   (AddTest[anotherSuite, "anotherTest", 1+1]; RunTest["anotherTest"]),
+    Column[{eMUnit`Private`drawBar[0], "1 run, 0 failed"}]}
 }];
 
 
@@ -550,7 +555,24 @@ AddTest["testCurrentSuiteRecheckDeleteTest", Module[{a = "notTouched (just check
  EndSuite[];
  AssertEquals["anotherTest", a];
  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-]];*)
+]];
+AddTest["testCurrentSuiteRecheckBeginSubsuite", 
+ Module[{a = "notTouched (just checkin)"},
+  EndSuite[];
+  AddTest[mytests, "atest", 
+    a = Module[{temp}, temp = BeginSubsuite[someSubsuite];
+      If[!temp===Null, EndSuite[]; 
+      DeleteTest[someSubsuite]];
+      temp]];
+  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+  AssertEquals[Null, a];
+  BeginSuite[anotherSuite];
+  AssertNoMessage[RunTest[mytests]];
+  EndSuite[];
+  AssertEquals[{anotherSuite, someSubsuite}, a];
+  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+]];
+*)
 
 
 (* ::Subsection::Closed:: *)
