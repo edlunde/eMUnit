@@ -73,22 +73,22 @@ AssertTrue[expr_] := Module[{evaluated = expr},
  If[TrueQ@evaluated, Null, 
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
-SetAttributes[{AssertNoMessage, AssertMessage}, HoldAll]
-AssertNoMessage[expr_] := AssertMessage[{}, expr]
-AssertMessage[message_MessageName | message : {}, expr_] := 
+SetAttributes[{AssertNoMessage, AssertMessage, assertMessage}, HoldAll]
+AssertNoMessage[expr_] := assertMessage[{}, expr, AssertNoMessage[expr]]
+AssertMessage[message_MessageName, expr_] := 
+  assertMessage[{message}, expr, AssertMessage[message, expr]]
+assertMessage[messages : {___MessageName}, expr_, originalCall_] := 
  Module[{assertSucceeded, messageList},
   Block[{$MessageList = {}}, 
    Quiet[
     expr;
-    assertSucceeded = If[Unevaluated@message === {}, 
-                         $MessageList === {}, 
-                         {HoldForm@message} === $MessageList];
-    , message];
+    assertSucceeded = HoldForm /@ Unevaluated[messages] === $MessageList;
+    , messages];
    messageList = $MessageList;
   ];
   Unprotect[$MessageList]; $MessageList = messageList; Protect[$MessageList];
   If[assertSucceeded, Null,
-     throwAssertException["AssertMessage", AssertMessage[message, expr], messageList]];
+     throwAssertException["AssertMessage", originalCall, messageList]];
  ]
 
 
@@ -358,7 +358,7 @@ AddTest["testAssertTrueUnevaluating",
  ]]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test AssertMessage*)
 
 
@@ -378,7 +378,7 @@ AddTest["testAssertNoMessage", Module[{mess, messenger, result},
     result = Catch[AssertNoMessage[messenger]; "noThrow", "AssertMessage"];
   , mess::aMessage];
   AssertEquals[eMUnit`Private`assertException[
-      HoldComplete[AssertMessage[{}, messenger]], 
+      HoldComplete[AssertNoMessage[messenger]], 
       {HoldForm[mess::aMessage]}]
    , result];
 ]]
@@ -611,7 +611,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test formatTestResult*)
 
 
@@ -654,6 +654,7 @@ AddTest["testFormatOneEachTestResult",
       "2 run, 1 failed", "anotherTest - Failed AssertEquals[1, -1], gave -1"}]]
   ]]];
 
+
 AddTest["testFormatHierarchicalTestResult",
  Module[{formattedResult, level1, level2, level3, i = 0},
   BeginSuite[level1];
@@ -677,6 +678,28 @@ AddTest["testFormatHierarchicalTestResult",
       "test3.1 - Failed AssertTrue[1 < 0], gave False"}]]
   ]
 ]]
+
+
+AddTest["testFormatAssertMessageExpectedMessage", 
+ Module[{formattedResult},
+  AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
+  formattedResult = RunTest[];
+  AssertTrue[
+   MatchQ[formattedResult, 
+    Column[{_Graphics, 
+      "1 run, 1 failed", 
+      "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}]]
+  ]]];
+AddTest["testFormatAssertNoMessage", 
+ Module[{formattedResult},
+  AddTest["aTest", AssertNoMessage[Drop[{}, 1]]];
+  Quiet[formattedResult = RunTest[], Drop::drop];
+  AssertTrue[
+   MatchQ[formattedResult, 
+    Column[{_Graphics, 
+      "1 run, 1 failed", 
+      "aTest - Failed AssertNoMessage[Drop[{}, 1]], gave {Drop::drop}"}]]
+  ]]];
 
 
 (* ::Section::Closed:: *)
