@@ -1,5 +1,26 @@
 (* ::Package:: *)
 
+(* ::Text:: *)
+(*ToDo:*)
+(**)
+(*fix bug: running twice fails testFormatAssertNoMessage*)
+(*fix bug: AssertEquals[smt, $MessageList] doesn't report "gave " correctly*)
+(**)
+(*AssertMessage: is quiet really needed inside block?*)
+(*report timing*)
+(*AssertMatch*)
+(*reorganize package file for easier development*)
+(*refactor tests using subsuites*)
+(*refactor assert tests - function for throwing fail exceptions*)
+(**)
+(*Maybe:*)
+(*errors - catching unexpected exceptions*)
+(*Logging?*)
+(*redesign public interface, RunTest called something else?*)
+(*Test coverage analysis*)
+(*go through UnitTest to get ideas (catch errors from tests? time/memoryConstrained)*)
+
+
 (* ::Section::Closed:: *)
 (*Declarations and usage*)
 
@@ -169,7 +190,7 @@ DeleteTest[suite_Symbol, name_] := (suite[name] =.;
   name)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*RunTest*)
 
 
@@ -319,6 +340,10 @@ AddTest["testAssertTrueUnevaluating",
                   _[HoldComplete[AssertTrue[_]], _]]; 
   If[Not@result, throwSomething["testAssertTrueUnevaluating failed"]]
  ]];
+
+
+(* ::Subsection:: *)
+(*Test AssertMatch*)
 
 
 (* ::Subsection::Closed:: *)
