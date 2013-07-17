@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Declarations*)
 
 
@@ -15,8 +15,12 @@ AssertTrue::usage = "AssertTrue[expression] returns Null if expression \
 evaluates to True. Otherwise it throws an AssertTrue-exception to be caught \
 by RunTest.";
 
-AssertMessage::usage = "";
-AssertNoMessage::usage = "";
+AssertMessage::usage = "AssertMessage[message, expr] evaluates expr and checks if \
+the message is generated (and quiets it). If not, it throws an AssertMessage-exception \
+to be caught by RunTest.\n\
+AssertNoMessage[expr] evaluates expr. If a message is sent,\
+ it throws an\[NonBreakingSpace]AssertMessage-exception to be caught by RunTest.";
+AssertNoMessage::usage = AssertMessage::usage;
 
 ListTests::usage = "ListTests[suite] lists the names of all installed tests in suite.\n\
 ListTests[] lists the tests in the current suite";
