@@ -243,14 +243,11 @@ End[];
 Begin["`PackageTests`"];
 
 
-(*throwSomething[text_] := Throw[HoldComplete[{"", text}], "AssertEquals"]*)
-
-
 throwSomething[text_] := 
   eMUnit`Private`throwAssertException["AssertEquals", text, ""]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Head*)
 
 
@@ -305,7 +302,7 @@ AddTest["testAssertTrueSuccess",
   a := True;
   result = Catch[AssertTrue[a], "AssertTrue"] === Null;
   If[Not@result, throwSomething["testAssertTrueSuccess failed"]]
- ]]
+ ]];
 
 AddTest["testAssertTrueFailure", 
  Module[{a, result},
@@ -314,14 +311,14 @@ AddTest["testAssertTrueFailure",
   If[result === eMUnit`Private`assertException[HoldComplete[AssertTrue[a]], False], 
      Null, 
      throwSomething["testAssertTrueFailure failed"]]
- ]]
+ ]];
 
 AddTest["testAssertTrueUnevaluating",
  Module[{a, result}, ClearAll[a]; 
   result = MatchQ[Catch[AssertTrue[a], "AssertTrue"], 
                   _[HoldComplete[AssertTrue[_]], _]]; 
   If[Not@result, throwSomething["testAssertTrueUnevaluating failed"]]
- ]]
+ ]];
 
 
 (* ::Subsection::Closed:: *)
@@ -332,7 +329,7 @@ AddTest["testAssertMessageRuns", Module[{mess, i = 0},
   mess::aMessage = "Message!";
   Catch[AssertMessage[mess::aMessage, i++], "AssertMessage"];
   AssertEquals[1, i];
-]]
+]];
 
 
 AddTest["testAssertNoMessage", Module[{mess, messenger, result},
@@ -347,14 +344,14 @@ AddTest["testAssertNoMessage", Module[{mess, messenger, result},
       HoldComplete[AssertNoMessage[messenger]], 
       {HoldForm[mess::aMessage]}]
    , result];
-]]
+]];
 
 AddTest["testAssertMessageCorrectMessage", Module[{mess, messenger, result},
   mess::aMessage = "Message!";
   messenger := Message[mess::aMessage];
   result = Catch[AssertMessage[mess::aMessage, messenger]; "noThrow", "AssertMessage"];
   AssertEquals["noThrow", result];
-]]
+]];
 
 AddTest["testAssertMessageThrows", Module[{mess, result},
   mess::aMessage = "Message!";
@@ -363,7 +360,7 @@ AddTest["testAssertMessageThrows", Module[{mess, result},
       HoldComplete[AssertMessage[mess::aMessage, "noMessage"]],
       {}]
     , result];
-]]
+]];
 
 
 AddTest["testAssertMessageQuiet", 
@@ -373,7 +370,7 @@ AddTest["testAssertMessageQuiet",
     Catch[AssertMessage[eMUnitMessages::suiteNotSet, ListTests[]], "AssertMessage"];
     AssertEquals[{}, $MessageList];
    , eMUnitMessages::suiteNotSet];
-]]
+]];
 AddTest["testAssertMessageNotQuietOther",
   EndSuite[];
   Block[{$MessageList = {}}, 
@@ -382,7 +379,7 @@ AddTest["testAssertMessageNotQuietOther",
         , "AssertMessage"];
     AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
    , eMUnitMessages::suiteNotSet];
-]]
+]];
 
 
 AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result},
@@ -393,7 +390,7 @@ AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result
    result = Catch[AssertMessage[mess::aMessage, messenger], "AssertMessage"];
   , mess::aMessage];
   AssertEquals[Null, result];
-]]
+]];
 
 
 (* ::Subsection::Closed:: *)
@@ -519,60 +516,6 @@ addRecheckCurrentSuiteTest @@@ Unevaluated[{
    (AddTest[anotherSuite, "anotherTest", 1+1]; RunTest["anotherTest"]),
     Column[{eMUnit`Private`drawBar[0], "1 run, 0 failed"}]}
 }];
-
-
-(*AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checkin)"},
- EndSuite[];
- AddTest[mytests, "atest", a = ListTests[]];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- AssertEquals[Null, a];
- BeginSuite[mytests];
- AssertNoMessage[RunTest[mytests]];
- EndSuite[];
- AssertEquals[{"atest"}, a];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-]];
-AddTest["testCurrentSuiteRecheckAddTest", Module[{a = "notTouched (just checkin)"},
- EndSuite[];
- AddTest[mytests, "atest", a = AddTest["anotherTest", 1+1]];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- AssertEquals[Null, a];
- BeginSuite[mytests];
- AssertNoMessage[RunTest[mytests]];
- EndSuite[];
- AssertEquals["anotherTest", a];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-]];
-AddTest["testCurrentSuiteRecheckDeleteTest", Module[{a = "notTouched (just checkin)"},
- EndSuite[];
- AddTest[mytests, "atest", 
-         a = (AddTest[mytests, "anotherTest", 1+1]; DeleteTest["anotherTest"])
-         ];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- AssertEquals[Null, a];
- BeginSuite[mytests];
- AssertNoMessage[RunTest[mytests]];
- EndSuite[];
- AssertEquals["anotherTest", a];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-]];
-AddTest["testCurrentSuiteRecheckBeginSubsuite", 
- Module[{a = "notTouched (just checkin)"},
-  EndSuite[];
-  AddTest[mytests, "atest", 
-    a = Module[{temp}, temp = BeginSubsuite[someSubsuite];
-      If[!temp===Null, EndSuite[]; 
-      DeleteTest[someSubsuite]];
-      temp]];
-  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-  AssertEquals[Null, a];
-  BeginSuite[anotherSuite];
-  AssertNoMessage[RunTest[mytests]];
-  EndSuite[];
-  AssertEquals[{anotherSuite, someSubsuite}, a];
-  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-]];
-*)
 
 
 (* ::Subsection::Closed:: *)
@@ -765,7 +708,7 @@ AddTest["testFormatHierarchicalTestResult",
       "test2.2 - Failed AssertEquals[1, -1], gave -1",
       "test3.1 - Failed AssertTrue[1 < 0], gave False"}]]
   ]
-]]
+]];
 
 
 AddTest["testFormatAssertMessageExpectedMessage", 
