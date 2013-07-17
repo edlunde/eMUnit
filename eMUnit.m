@@ -135,9 +135,11 @@ ListTests[suite_] := suite[UnitTests]
 
 SetAttributes[AddTest, HoldAll];
 AddTest[name_, test_] := runIfSuiteSet[AddTest[currentSuite[], name, test]]
+(*AddTest[name_, test_] /; currentSuiteSetQ[] := AddTest[currentSuite[], name, test]*)
 AddTest[suite_, name_, test_] := Module[{},
   suite[name] := test;
   updateTestList[suite, name];
+  name
 ]
 updateTestList[suite_, name_] := Module[{},
   If[!ListQ@suite[UnitTests], suite[UnitTests] = {}];
@@ -151,16 +153,17 @@ shouldBeAdded[suite_, name_] :=
 AddSuite[subsuite_] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
 AddSuite[mainSuite_, subsuite_] := AddTest[mainSuite, subsuite, runTest[subsuite]]
 
-BeginSubsuite[subsuite_] /; currentSuiteSetQ[] := 
+(*BeginSubsuite[subsuite_] /; currentSuiteSetQ[] := 
  (AddSuite[subsuite]; 
-  BeginSuite[subsuite])
-(*BeginSubsuite[subsuite_] := runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]*)
+  BeginSuite[subsuite])*)
+BeginSubsuite[subsuite_] := runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
 
 
-DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]
-(*DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]*)
+(*DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]*)
+DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
 DeleteTest[suite_, name_] := (suite[name] =.; 
-  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
+  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];
+  name)
 
 
 (* ::Subsection::Closed:: *)
@@ -462,6 +465,7 @@ rather than
 ListTests[] := ... /; currentSuiteSetQ[]
 caused the check not to be run if inside tests.
 
+******************************************************************
 Basic mechanism:
 ClearAll[extractIfListExists,list];
 extractIfListExists[] /; checkList := list[[1]];
@@ -476,36 +480,40 @@ extractIfListExists[]
 
 ClearAll[list];
 
-runExtract[]:=extractIfListExists[];
+runExtract[] := extractIfListExists[];
 runExtract[]
 runExtract[]
 list={1,2,3};
 runExtract[]
+******************************************************************
 *)
 
 (* ListTests, AddTest, AddSuite, BeginSubsuite, DeleteTest, RunTests (both)  *)
-Function[{function},
- AddTest["testCurrentSuiteRecheck" <> ToString[Head[Unevaluated@function]], 
-  Module[{a = "notTouched (just checkin)"},
+Function[{name, expr, result},
+ AddTest["testCurrentSuiteRecheck" <> name, Module[{a = "notTouched (just checkin)"},
    EndSuite[];
-   AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[function]];
+   AddTest[mytests, "atest", a = expr];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-   AssertEquals[HoldForm@function, a];
+   AssertEquals[Null, a];
    BeginSuite[mytests];
    AssertNoMessage[RunTest[mytests]];
    EndSuite[];
-   AssertEquals[HoldForm@function, a];
+   AssertEquals[result, a];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- ]], HoldAll] /@ Unevaluated[{
-  (*ListTests[], *)
-  AddTest["anotherTest", 1+1],
-  AddSuite[someSubsuite]
-  (*BeginSubsuite[someSubsuite], (* Requires special test? *)*)
-  (*DeleteTest["nonExistentTest"],(* Requires special test? *)*)
+ ]], HoldAll] @@@ Unevaluated[{
+  {"ListTests", ListTests[], {"atest"}},
+  {"AddTest", AddTest["anotherTest", 1+1], "anotherTest"},
+  {"AddSuite", AddSuite[someSubsuite], someSubsuite},
+  {"BeginSubsuite", 
+   Module[{temp = BeginSubsuite[someSubsuite]}, EndSuite[]; temp], 
+   {mytests, someSubsuite}},
+  {"DeleteTest", 
+   (AddTest[mytests, "anotherTest", 1+1]; DeleteTest["anotherTest"]), 
+    "anotherTest"}
 }];
 
 
-AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checkin)"},
+(*AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checkin)"},
  EndSuite[];
  AddTest[mytests, "atest", a = ListTests[]];
  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
@@ -516,31 +524,28 @@ AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checki
  AssertEquals[{"atest"}, a];
  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
 ]];
-
-
-(*
-AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checkin)"},
- EndSuite[];
- AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[ListTests[]]];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- AssertEquals[HoldForm@ListTests[], a];
- BeginSuite[mytests];
- AssertNoMessage[RunTest[mytests]];
- EndSuite[];
- AssertEquals[HoldForm@ListTests[], a];
- AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
-]];
-
 AddTest["testCurrentSuiteRecheckAddTest", Module[{a = "notTouched (just checkin)"},
  EndSuite[];
- AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[
-                                     AddTest["anotherTest", 1+1]]];
+ AddTest[mytests, "atest", a = AddTest["anotherTest", 1+1]];
  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
- AssertEquals[HoldForm@AddTest["anotherTest", 1+1], a];
+ AssertEquals[Null, a];
  BeginSuite[mytests];
  AssertNoMessage[RunTest[mytests]];
  EndSuite[];
- AssertEquals[HoldForm@AddTest["anotherTest", 1+1], a];
+ AssertEquals["anotherTest", a];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+]];
+AddTest["testCurrentSuiteRecheckDeleteTest", Module[{a = "notTouched (just checkin)"},
+ EndSuite[];
+ AddTest[mytests, "atest", 
+         a = (AddTest[mytests, "anotherTest", 1+1]; DeleteTest["anotherTest"])
+         ];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+ AssertEquals[Null, a];
+ BeginSuite[mytests];
+ AssertNoMessage[RunTest[mytests]];
+ EndSuite[];
+ AssertEquals["anotherTest", a];
  AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
 ]];*)
 
