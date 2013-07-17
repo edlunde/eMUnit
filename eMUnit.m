@@ -497,12 +497,25 @@ Function[{function},
    AssertEquals[HoldForm@function, a];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
  ]], HoldAll] /@ Unevaluated[{
-  ListTests[], 
+  (*ListTests[], *)
   AddTest["anotherTest", 1+1],
   AddSuite[someSubsuite]
   (*BeginSubsuite[someSubsuite], (* Requires special test? *)*)
   (*DeleteTest["nonExistentTest"],(* Requires special test? *)*)
 }];
+
+
+AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checkin)"},
+ EndSuite[];
+ AddTest[mytests, "atest", a = ListTests[]];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+ AssertEquals[Null, a];
+ BeginSuite[mytests];
+ AssertNoMessage[RunTest[mytests]];
+ EndSuite[];
+ AssertEquals[{"atest"}, a];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+]];
 
 
 (*
