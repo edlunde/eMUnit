@@ -59,6 +59,10 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
+(* ::Subsection:: *)
+(*Asserts*)
+
+
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := Module[{evaluated = expr},
   If[Unevaluated[shouldBe] === evaluated, Null, 
@@ -87,20 +91,25 @@ AssertMessage[message_MessageName | message : {}, expr_] :=
      throwAssertException["AssertMessage", AssertMessage[message, expr], messageList]];
  ]
 
+
 SetAttributes[throwAssertException, HoldRest];
-throwAssertException[name_?isAssertExceptionName, expr_, res_] := 
-   Throw[HoldComplete[expr], name]
+throwAssertException[name_?isAssertExceptionName, expr_, result_] := 
+   Throw[assertException[HoldComplete[expr], result], name]
 isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
 assertExceptionNames = {"AssertEquals", "AssertTrue", "AssertMessage"};
 
 createTestResult[suite_, name_, result_] := testResult[suite, name, result]
-isFailure[result_testResult] := Head[result[[3]]] === HoldComplete
+isFailure[result_testResult] := Head[getResult[result]] === assertException
 getTest[result_testResult] := result[[2]]
-getResultString[failure_?isFailure] := replaceHoldWithToString @@ failure[[3]]
-getEvaluatedAssertExpr[failure_?isFailure] := Catch[Quiet[failure[[3, 1, -1]]]]
-
+getResult[result_testResult] := result[[3]]
+getEvaluatedAssertExpr[failure_?isFailure] := getResult[failure][[-1]]
+getResultString[failure_?isFailure] := replaceHoldWithToString@@getResult[failure][[1]];
 SetAttributes[replaceHoldWithToString, HoldAll]
 replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
+
+
+(* ::Subsection::Closed:: *)
+(*Begin, List, Add, Delete*)
 
 
 BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}]; 
@@ -143,6 +152,10 @@ DeleteTest[suite_, name_] := (suite[name] =.;
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
 
+(* ::Subsection::Closed:: *)
+(*RunTest*)
+
+
 RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
 RunTest[suite_] := formatTestResult[runTest[suite]]
 RunTest[stringPattern_?isStringPatternQ] /; currentSuiteSetQ[] := 
@@ -165,6 +178,10 @@ runTest[suite_, name_] := Module[{result},
   suite["Tear Down"];
   createTestResult[suite, name, result]
  ]
+
+
+(* ::Subsection::Closed:: *)
+(*Format*)
 
 
 formatTestResult[results : {__testResult}] :=
@@ -209,7 +226,11 @@ End[];
 Begin["`PackageTests`"];
 
 
-throwSomething[text_] := Throw[HoldComplete[{"", text}], "AssertEquals"]
+(*throwSomething[text_] := Throw[HoldComplete[{"", text}], "AssertEquals"]*)
+
+
+throwSomething[text_] := 
+  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
 
 
 (* ::Subsection::Closed:: *)
@@ -231,7 +252,8 @@ AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
 (*Test suiteNotSet message*)
 
 
-(*AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
+(*(* check moving '/; currentSuiteSet' to after := *)
+AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
  EndSuite[];
  AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[ListTests[]]];
  Block[{$MessageList = {}}, 
@@ -290,15 +312,20 @@ AddTest["testAssertEqualsSuccess",
 AddTest["testAssertEqualsThrow", 
  Module[{i, result},
   i := 2;
-  result = Catch[AssertEquals[1, i], "AssertEquals"] === HoldComplete[AssertEquals[1, i]];
-  If[Not@result, throwSomething["testAssertEqualsThrow failed"]]
+  result = Catch[AssertEquals[1, i], "AssertEquals"];
+  If[result === eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
+     Null,
+     throwSomething["testAssertEqualsThrow failed"]]
  ]]
 
 AddTest["testAssertEqualsUnevaluated",
  Module[{result, f, i = 0},
   f[a_] /; (i += a; False) := Throw["This shouldn't evaluate"];
   result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
-  AssertEquals[Unevaluated@HoldComplete[AssertEquals[f[2], f[3]]], result];
+  AssertEquals[Unevaluated@eMUnit`Private`assertException[
+      HoldComplete[AssertEquals[f[2], f[3]]], 
+      f[3]]
+   , result];
   AssertEquals[3, i];
  ]];
 
@@ -317,13 +344,16 @@ AddTest["testAssertTrueSuccess",
 AddTest["testAssertTrueFailure", 
  Module[{a, result},
   a := False;
-  result = Catch[AssertTrue[a], "AssertTrue"] === HoldComplete[AssertTrue[a]];
-  If[Not@result, throwSomething["testAssertTrueFailure failed"]]
+  result = Catch[AssertTrue[a], "AssertTrue"];
+  If[result === eMUnit`Private`assertException[HoldComplete[AssertTrue[a]], False], 
+     Null, 
+     throwSomething["testAssertTrueFailure failed"]]
  ]]
 
 AddTest["testAssertTrueUnevaluating",
  Module[{a, result}, ClearAll[a]; 
-  result = MatchQ[Catch[AssertTrue[a], "AssertTrue"], HoldComplete[AssertTrue[_]]]; 
+  result = MatchQ[Catch[AssertTrue[a], "AssertTrue"], 
+                  _[HoldComplete[AssertTrue[_]], _]]; 
   If[Not@result, throwSomething["testAssertTrueUnevaluating failed"]]
  ]]
 
@@ -347,7 +377,10 @@ AddTest["testAssertNoMessage", Module[{mess, messenger, result},
   Quiet[
     result = Catch[AssertNoMessage[messenger]; "noThrow", "AssertMessage"];
   , mess::aMessage];
-  AssertEquals[HoldComplete[AssertMessage[{}, messenger]], result];
+  AssertEquals[eMUnit`Private`assertException[
+      HoldComplete[AssertMessage[{}, messenger]], 
+      {HoldForm[mess::aMessage]}]
+   , result];
 ]]
 
 AddTest["testAssertMessageCorrectMessage", Module[{mess, messenger, result},
@@ -360,7 +393,10 @@ AddTest["testAssertMessageCorrectMessage", Module[{mess, messenger, result},
 AddTest["testAssertMessageThrows", Module[{mess, result},
   mess::aMessage = "Message!";
   result = Catch[AssertMessage[mess::aMessage, "noMessage"], "AssertMessage"];
-  AssertEquals[HoldComplete[AssertMessage[mess::aMessage, "noMessage"]], result];
+  AssertEquals[eMUnit`Private`assertException[
+      HoldComplete[AssertMessage[mess::aMessage, "noMessage"]],
+      {}]
+    , result];
 ]]
 
 
@@ -394,7 +430,7 @@ AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result
 ]]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AddTest*)
 
 
