@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
-(* ::Section:: *)
-(*Declarations*)
+(* ::Section::Closed:: *)
+(*Declarations and usage*)
 
 
 BeginPackage["eMUnit`"];
@@ -63,7 +63,7 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Asserts*)
 
 
@@ -279,13 +279,7 @@ AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
 
 AddTest["testSuiteNotSetMessage",
  EndSuite[];
- Block[{$MessageList = {}}, 
-  Quiet[
-   AddTest["testWithoutSuite", 1+1];
-   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList]
-   , eMUnitMessages::suiteNotSet];
-  AssertEquals[{}, $MessageList];
- ]
+ AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
 ]
 
 
@@ -294,13 +288,10 @@ AddTest["testSuiteNotSetMessage",
 
 
 AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
- Block[{$MessageList = {}}, 
-  Quiet[
-   BeginSuite[mytests];
-   Do[EndSuite[];,{5}];
-   AssertEquals[{}, $MessageList];
-   , {Drop::drop}]
- ]]
+  BeginSuite[mytests];
+  Do[EndSuite[];,{5}];
+  AssertNoMessage[EndSuite[]];
+ ]
 
 
 (* ::Subsection::Closed:: *)
@@ -362,7 +353,7 @@ AddTest["testAssertTrueUnevaluating",
  ]]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test AssertMessage*)
 
 
@@ -519,12 +510,8 @@ AddTest["testRunTestWithPattern",
  ]];
 
 AddTest["testRunTestWithNonmatchingPattern", Module[{result},
- Block[{$MessageList = {}}, 
-  Quiet[
-   result = RunTest[__ ~~ "nonmatchingPattern"];
-   AssertEquals[{HoldForm[eMUnitMessages::nonexistentTest]}, $MessageList]
-   , eMUnitMessages::nonexistentTest];
-  AssertEquals[{}, $MessageList];
+ AssertMessage[eMUnitMessages::nonexistentTest, 
+  result = RunTest[__ ~~ "nonmatchingPattern"]
  ];
  AssertEquals[
   Unevaluated@RunTest[eMUnit`PackageTests`mytests,__~~"nonmatchingPattern"], 
@@ -548,13 +535,8 @@ AddTest["testRunTestOnParentWithStringPattern", Module[{i = 0},
   ClearAll[mySubsuite];
   AddSuite[mySubsuite];
   AddTest[mySubsuite, "aTestNotExistingInParent", i++];
-  Block[{$MessageList = {}}, 
-   Quiet[
-    RunTest[mytests, __~~"NotExistingInParent"];
-    AssertEquals[{HoldForm[eMUnitMessages::nonexistentTest]}, $MessageList]
-   , eMUnitMessages::nonexistentTest];
-   AssertEquals[{}, $MessageList];
-  ];
+  AssertMessage[eMUnitMessages::nonexistentTest, 
+    RunTest[mytests, __~~"NotExistingInParent"]];
   AssertEquals[0, i];
   RunTest[mySubsuite, __~~"NotExistingInParent"]
   AssertEquals[1, i];
@@ -615,7 +597,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test formatTestResult*)
 
 
