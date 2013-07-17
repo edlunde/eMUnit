@@ -63,7 +63,7 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Asserts*)
 
 
@@ -102,7 +102,7 @@ throwAssertException[name_?isAssertExceptionName, expr_, result_] :=
 isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
 assertExceptionNames = {"AssertEquals", "AssertTrue", "AssertMessage"};
 
-createTestResult[suite_, name_, result_] := testResult[suite, name, result]
+createTestResult[suite_Symbol, name_, result_] := testResult[suite, name, result]
 isFailure[result_testResult] := Head[getResult[result]] === assertException
 getTest[result_testResult] := result[[2]]
 getResult[result_testResult] := result[[3]]
@@ -116,7 +116,7 @@ replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
 (*Begin, List, Add, Delete*)
 
 
-BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}]; 
+BeginSuite[suite_Symbol] := (If[!ListQ[suiteStack], suiteStack = {}]; 
   AppendTo[suiteStack, suite])
 EndSuite[] := If[Length[suiteStack] > 0, suiteStack = Drop[suiteStack, -1]]
 currentSuite[] := suiteStack[[-1]]
@@ -130,63 +130,66 @@ eMUnitMessages::suiteNotSet = "No suite set with BeginSuite[].";
 
 (*ListTests[] /; currentSuiteSetQ[]  := ListTests[currentSuite[]]*)
 ListTests[] := runIfSuiteSet[ListTests[currentSuite[]]]
-ListTests[suite_] := suite[UnitTests]
+ListTests[suite_Symbol] := suite[UnitTests]
 
 
-SetAttributes[AddTest, HoldAll];
+SetAttributes[AddTest, HoldRest];
 AddTest[name_, test_] := runIfSuiteSet[AddTest[currentSuite[], name, test]]
 (*AddTest[name_, test_] /; currentSuiteSetQ[] := AddTest[currentSuite[], name, test]*)
-AddTest[suite_, name_, test_] := Module[{},
+AddTest[suite_Symbol, name_, test_] := Module[{},
   suite[name] := test;
   updateTestList[suite, name];
   name
 ]
-updateTestList[suite_, name_] := Module[{},
+updateTestList[suite_Symbol, name_] := Module[{},
   If[!ListQ@suite[UnitTests], suite[UnitTests] = {}];
   If[shouldBeAdded[suite, name], AppendTo[suite[UnitTests], name]]
 ]
-shouldBeAdded[suite_, name_] := 
+shouldBeAdded[suite_Symbol, name_] := 
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
-(*AddSuite[subsuite_] /; currentSuiteSetQ[] := AddSuite[currentSuite[], subsuite]*)
-AddSuite[subsuite_] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
-AddSuite[mainSuite_, subsuite_] := AddTest[mainSuite, subsuite, runTest[subsuite]]
+(*AddSuite[subsuite_Symbol] /; currentSuiteSetQ[] := 
+    AddSuite[currentSuite[], subsuite]*)
+AddSuite[subsuite_Symbol] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
+AddSuite[mainSuite_Symbol, subsuite_Symbol] := 
+   AddTest[mainSuite, subsuite, runTest[subsuite]]
 
-(*BeginSubsuite[subsuite_] /; currentSuiteSetQ[] := 
+(*BeginSubsuite[subsuite_Symbol] /; currentSuiteSetQ[] := 
  (AddSuite[subsuite]; 
   BeginSuite[subsuite])*)
-BeginSubsuite[subsuite_] := runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
+BeginSubsuite[subsuite_Symbol] := 
+  runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
 
 
 (*DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]*)
 DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
-DeleteTest[suite_, name_] := (suite[name] =.; 
+DeleteTest[suite_Symbol, name_] := (suite[name] =.; 
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];
   name)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*RunTest*)
 
 
 RunTest[] /; currentSuiteSetQ[] := RunTest[currentSuite[]]
-RunTest[suite_] := formatTestResult[runTest[suite]]
+RunTest[suite_Symbol] := formatTestResult[runTest[suite]]
 RunTest[stringPattern_?isStringPatternQ] /; currentSuiteSetQ[] := 
   RunTest[currentSuite[], stringPattern]
 
-RunTest[suite_, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern] := 
+RunTest[suite_Symbol, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern] := 
   formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
-selectTests[suite_, pattern_] := 
+selectTests[suite_Symbol, pattern_] := 
   Select[ListTests[suite], StringQ[#] && StringMatchQ[#, pattern] &]
-testExists[suite_, pattern_] := 
+testExists[suite_Symbol, pattern_] := 
   If[Length[selectTests[suite, pattern]] > 0, True, 
      Message[eMUnitMessages::nonexistentTest, suite, pattern]; False]
 eMUnitMessages::nonexistentTest = "No test in suite '`1`' matches '`2`'";
 isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
 
-runTest[suite_] := runTest[suite, #] & /@ ListTests[suite]
-runTest[suite_, name_] := Module[{result},
+runTest[suite_Symbol] := runTest[suite, #] & /@ ListTests[suite]
+runTest[suite_Symbol, name_] := Module[{result},
   suite["Set Up"];
   result = Catch[suite[name], exceptionName_?isAssertExceptionName];
   suite["Tear Down"];
