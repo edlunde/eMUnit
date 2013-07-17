@@ -112,7 +112,7 @@ SetAttributes[replaceHoldWithToString, HoldAll]
 replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Begin, List, Add, Delete*)
 
 
@@ -120,17 +120,21 @@ BeginSuite[suite_] := (If[!ListQ[suiteStack], suiteStack = {}];
   AppendTo[suiteStack, suite])
 EndSuite[] := If[Length[suiteStack] > 0, suiteStack = Drop[suiteStack, -1]]
 currentSuite[] := suiteStack[[-1]]
+
+SetAttributes[runIfSuiteSet, HoldAll]
+runIfSuiteSet[expr_] := If[currentSuiteSetQ[], expr]
 currentSuiteSetQ[] := If[Length[suiteStack] > 0, True, 
   Message[eMUnitMessages::suiteNotSet]; False]
 eMUnitMessages::suiteNotSet = "No suite set with BeginSuite[].";
 
 
-ListTests[] /; currentSuiteSetQ[] := ListTests[currentSuite[]]
+(*ListTests[] /; currentSuiteSetQ[]  := ListTests[currentSuite[]]*)
+ListTests[] := runIfSuiteSet[ListTests[currentSuite[]]]
 ListTests[suite_] := suite[UnitTests]
 
 
 SetAttributes[AddTest, HoldAll];
-AddTest[name_, test_] /; currentSuiteSetQ[] := AddTest[currentSuite[], name, test]
+AddTest[name_, test_] := runIfSuiteSet[AddTest[currentSuite[], name, test]]
 AddTest[suite_, name_, test_] := Module[{},
   suite[name] := test;
   updateTestList[suite, name];
@@ -143,15 +147,18 @@ shouldBeAdded[suite_, name_] :=
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
-AddSuite[subsuite_] /; currentSuiteSetQ[] := AddSuite[currentSuite[], subsuite]
+(*AddSuite[subsuite_] /; currentSuiteSetQ[] := AddSuite[currentSuite[], subsuite]*)
+AddSuite[subsuite_] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
 AddSuite[mainSuite_, subsuite_] := AddTest[mainSuite, subsuite, runTest[subsuite]]
 
 BeginSubsuite[subsuite_] /; currentSuiteSetQ[] := 
  (AddSuite[subsuite]; 
   BeginSuite[subsuite])
+(*BeginSubsuite[subsuite_] := runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]*)
 
 
 DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]
+(*DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]*)
 DeleteTest[suite_, name_] := (suite[name] =.; 
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];)
 
@@ -250,48 +257,6 @@ BeginSuite[frameworkTests];
 
 AddTest["Set Up", ClearAll[mytests]; BeginSuite[mytests];];
 AddTest["Tear Down", EndSuite[]; ClearAll[mytests]];
-
-
-(* ::Subsection::Closed:: *)
-(*Test suiteNotSet message*)
-
-
-(*(* check moving '/; currentSuiteSet' to after := *)
-AddTest["testCurrentSuiteRecheck", Module[{a = "notTouched"},
- EndSuite[];
- AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[ListTests[]]];
- Block[{$MessageList = {}}, 
-  Quiet[
-   RunTest[mytests];
-   AssertEquals[HoldForm@ListTests[], a];
-   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
-   BeginSuite[mytests];
-   RunTest[mytests];
-   EndSuite[];
-   AssertEquals[{"atest"}, ReleaseHold@a];
-   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
-   RunTest[mytests];
-   AssertEquals[{HoldForm[eMUnitMessages::suiteNotSet], 
-                 HoldForm[eMUnitMessages::suiteNotSet]}, $MessageList];
-  , eMUnitMessages::suiteNotSet];
-]]]*)
-
-
-AddTest["testSuiteNotSetMessage",
- EndSuite[];
- AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
-]
-
-
-(* ::Subsection::Closed:: *)
-(*Test EndSuite*)
-
-
-AddTest[eMUnit`PackageTests`frameworkTests, "testEndSuiteEmptyStack",
-  BeginSuite[mytests];
-  Do[EndSuite[];,{5}];
-  AssertNoMessage[EndSuite[]];
- ]
 
 
 (* ::Subsection::Closed:: *)
@@ -449,7 +414,7 @@ AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result
 
 
 (* ::Subsection::Closed:: *)
-(*Test AddSuite*)
+(*Test Suite workings*)
 
 
 AddTest["testAddSuite",
@@ -471,6 +436,100 @@ AddTest["testRunSubSuite", Module[{i = 0},
   RunTest[];
   AssertEquals[6, i]
 ]];
+
+
+AddTest["testSuiteNotSetMessage",
+ EndSuite[];
+ AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
+]
+
+
+AddTest["testEndSuiteEmptyStack",
+  BeginSuite[mytests];
+  Do[EndSuite[];,{5}];
+  AssertNoMessage[EndSuite[]];
+]
+
+
+(* ::Subsection:: *)
+(**)
+
+
+(* 
+Tests for a bug where having 
+ListTests[] /; currentSuiteSetQ[] := ...
+rather than
+ListTests[] := ... /; currentSuiteSetQ[]
+caused the check not to be run if inside tests.
+
+Basic mechanism:
+ClearAll[extractIfListExists,list];
+extractIfListExists[] /; checkList := list[[1]];
+checkList:=If[Length[list]>0,True,Print["error: no list"];False];
+ClearAll[extractIfListExists,list];
+extractIfListExists[]/;checkList:=list[[1]];
+checkList:=If[Length[list]>0,True,Print["error: no list"];False];
+
+extractIfListExists[]
+list={1,2,3};
+extractIfListExists[]
+
+ClearAll[list];
+
+runExtract[]:=extractIfListExists[];
+runExtract[]
+runExtract[]
+list={1,2,3};
+runExtract[]
+*)
+
+(* ListTests, AddTest, AddSuite, BeginSubsuite, DeleteTest, RunTests (both)  *)
+Function[{function},
+ AddTest["testCurrentSuiteRecheck" <> ToString[Head[Unevaluated@function]], 
+  Module[{a = "notTouched (just checkin)"},
+   EndSuite[];
+   AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[function]];
+   AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+   AssertEquals[HoldForm@function, a];
+   BeginSuite[mytests];
+   AssertNoMessage[RunTest[mytests]];
+   EndSuite[];
+   AssertEquals[HoldForm@function, a];
+   AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+ ]], HoldAll] /@ Unevaluated[{
+  ListTests[], 
+  AddTest["anotherTest", 1+1],
+  AddSuite[someSubsuite]
+  (*BeginSubsuite[someSubsuite], (* Requires special test? *)*)
+  (*DeleteTest["nonExistentTest"],(* Requires special test? *)*)
+}];
+
+
+(*
+AddTest["testCurrentSuiteRecheckListTests", Module[{a = "notTouched (just checkin)"},
+ EndSuite[];
+ AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[ListTests[]]];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+ AssertEquals[HoldForm@ListTests[], a];
+ BeginSuite[mytests];
+ AssertNoMessage[RunTest[mytests]];
+ EndSuite[];
+ AssertEquals[HoldForm@ListTests[], a];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+]];
+
+AddTest["testCurrentSuiteRecheckAddTest", Module[{a = "notTouched (just checkin)"},
+ EndSuite[];
+ AddTest[mytests, "atest", a = If[Length@# > 1, #[[1]], #]& @ Trace[
+                                     AddTest["anotherTest", 1+1]]];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+ AssertEquals[HoldForm@AddTest["anotherTest", 1+1], a];
+ BeginSuite[mytests];
+ AssertNoMessage[RunTest[mytests]];
+ EndSuite[];
+ AssertEquals[HoldForm@AddTest["anotherTest", 1+1], a];
+ AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
+]];*)
 
 
 (* ::Subsection::Closed:: *)
