@@ -3,15 +3,8 @@
 (* ::Text:: *)
 (*ToDo:*)
 (**)
-(*AssertMatch usage*)
-(**)
-(*fix bug: running twice fails testFormatAssertNoMessage*)
-(*fix bug: AssertEquals[smt, $MessageList] doesn't report "gave " correctly*)
-(**)
-(*AssertMessage: is quiet really needed inside block?*)
 (*report timing*)
 (*reorganize package file for easier development*)
-(*refactor tests using subsuites*)
 (**)
 (*Maybe:*)
 (*errors - catching unexpected exceptions (and messages)*)
@@ -88,7 +81,7 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Asserts*)
 
 
@@ -107,23 +100,31 @@ AssertTrue[expr_] := Module[{evaluated = expr},
  If[TrueQ@evaluated, Null, 
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
-SetAttributes[{AssertNoMessage, AssertMessage, assertMessage}, HoldAll]
+
+SetAttributes[{AssertNoMessage, AssertMessage, 
+               assertMessage, quietEvaluateAndCheckMessages}, HoldAll]
 AssertNoMessage[expr_] := assertMessage[{}, expr, AssertNoMessage[expr]]
 AssertMessage[message_MessageName, expr_] := 
   assertMessage[{message}, expr, AssertMessage[message, expr]]
-assertMessage[messages : {___MessageName}, expr_, originalCall_] := 
- Module[{assertSucceeded, messageList},
-  Block[{$MessageList = {}}, 
+
+assertMessage[expectedMessages : {___MessageName}, expr_, originalCall_] := 
+Module[{onlyExpectedMessagesQ, uncaughtMessages},
+ {onlyExpectedMessagesQ, uncaughtMessages} = 
+        quietEvaluateAndCheckMessages[expectedMessages, expr];
+ If[onlyExpectedMessagesQ, Null,
+    passOnMessages[uncaughtMessages];
+    throwAssertException["AssertMessage", originalCall, uncaughtMessages]]
+]
+
+quietEvaluateAndCheckMessages[expectedMessages_, expr_] := Block[{$MessageList = {}}, 
+ Module[{onlyExpectedMessagesQ},
    Quiet[
     expr;
-    assertSucceeded = HoldForm /@ Unevaluated[messages] === $MessageList;
-    , messages];
-   messageList = $MessageList;
-  ];
-  Unprotect[$MessageList]; $MessageList = messageList; Protect[$MessageList];
-  If[assertSucceeded, Null,
-     throwAssertException["AssertMessage", originalCall, messageList]];
- ]
+    onlyExpectedMessagesQ = HoldForm /@ Unevaluated[expectedMessages] === $MessageList;
+    , expectedMessages];
+   {onlyExpectedMessagesQ, $MessageList}]]
+passOnMessages[uncaughtMessages_] := 
+  (Unprotect[$MessageList]; $MessageList = uncaughtMessages; Protect[$MessageList];)
 
 
 SetAttributes[throwAssertException, HoldRest];
@@ -271,18 +272,18 @@ End[];
 (*Tests*)
 
 
-Begin["`PackageTests`"];
-
-
-throwSomething[text_] := 
-  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
-
-
 (* ::Subsection::Closed:: *)
 (*Head*)
 
 
+Begin["`PackageTests`"];
+
+
 TestEMUnitPackage[] := RunTest[frameworkTests]
+
+
+throwSomething[text_] := 
+  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
 
 
 ClearAll[frameworkTests];
@@ -328,7 +329,7 @@ AddTest["testAssertEqualsUnevaluated",
 (*Test AssertMatch*)
 
 
-AddTest["testAssertMatch",
+AddTest["testAssertMatchSuccess",
   If[Not[Catch[AssertMatch[_?NumericQ, 1], "AssertMatch"] === Null], 
      throwSomething["testAssertMatch failed"]]
  ];
@@ -698,7 +699,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test formatTestResult*)
 
 
