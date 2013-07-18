@@ -3,18 +3,18 @@
 (* ::Text:: *)
 (*ToDo:*)
 (**)
+(*AssertMatch usage*)
+(**)
 (*fix bug: running twice fails testFormatAssertNoMessage*)
 (*fix bug: AssertEquals[smt, $MessageList] doesn't report "gave " correctly*)
 (**)
 (*AssertMessage: is quiet really needed inside block?*)
 (*report timing*)
-(*AssertMatch*)
 (*reorganize package file for easier development*)
 (*refactor tests using subsuites*)
-(*refactor assert tests - function for throwing fail exceptions*)
 (**)
 (*Maybe:*)
-(*errors - catching unexpected exceptions*)
+(*errors - catching unexpected exceptions (and messages)*)
 (*Logging?*)
 (*redesign public interface, RunTest called something else?*)
 (*Test coverage analysis*)
@@ -30,6 +30,10 @@ BeginPackage["eMUnit`"];
 
 AssertEquals::usage = "AssertEquals[value, expression] returns Null if expression \
 evaluates to value. Otherwise it throws an AssertEquals-exception to be caught \
+by RunTest.";
+
+AssertMatch::usage = "AssertMatch[form, expression] returns Null if expression \
+matches form. Otherwise it throws an AssertMatch-exception to be caught \
 by RunTest.";
 
 AssertTrue::usage = "AssertTrue[expression] returns Null if expression \
@@ -90,8 +94,13 @@ Begin["`Private`"];
 
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := Module[{evaluated = expr},
-  If[Unevaluated[shouldBe] === evaluated, Null, 
+ If[Unevaluated[shouldBe] === evaluated, Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
+
+SetAttributes[AssertMatch, HoldRest]
+AssertMatch[form_, expr_] := Module[{evaluated = expr},
+ If[MatchQ[evaluated, form], Null,
+    throwAssertException["AssertMatch", AssertMatch[form, expr], evaluated]]]
 
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] := Module[{evaluated = expr},
@@ -121,7 +130,8 @@ SetAttributes[throwAssertException, HoldRest];
 throwAssertException[name_?isAssertExceptionName, expr_, result_] := 
    Throw[assertException[HoldComplete[expr], result], name]
 isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
-assertExceptionNames = {"AssertEquals", "AssertTrue", "AssertMessage"};
+assertExceptionNames = 
+  {"AssertEquals", "AssertMatch", "AssertTrue", "AssertMessage"};
 
 createTestResult[suite_Symbol, name_, result_] := testResult[suite, name, result]
 isFailure[result_testResult] := Head[getResult[result]] === assertException
@@ -315,6 +325,32 @@ AddTest["testAssertEqualsUnevaluated",
 
 
 (* ::Subsection::Closed:: *)
+(*Test AssertMatch*)
+
+
+AddTest["testAssertMatch",
+  If[Not[Catch[AssertMatch[_?NumericQ, 1], "AssertMatch"] === Null], 
+     throwSomething["testAssertMatch failed"]]
+ ];
+
+AddTest["testAssertMatchFailed", Module[{result},
+  result = Catch[AssertMatch[_Symbol, 1], "AssertMatch"];
+  If[Not[result === 
+       eMUnit`Private`assertException[HoldComplete[AssertMatch[_Symbol, 1]], 1]], 
+     throwSomething["testAssertMatch failed"]]
+ ]];
+
+AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
+  result = Catch[AssertMatch[0, ++i], "AssertMatch"];
+  AssertEquals[1, i];
+  If[Not[result === 
+         eMUnit`Private`assertException[HoldComplete[AssertMatch[0, ++i]], 1]],
+     throwSomething["testAssertMatchFailedEvaluatesOnce failed"]];
+  AssertEquals[1, i];
+]];
+
+
+(* ::Subsection::Closed:: *)
 (*Test AssertTrue*)
 
 
@@ -336,14 +372,9 @@ AddTest["testAssertTrueFailure",
 
 AddTest["testAssertTrueUnevaluating",
  Module[{a, result}, ClearAll[a]; 
-  result = MatchQ[Catch[AssertTrue[a], "AssertTrue"], 
-                  _[HoldComplete[AssertTrue[_]], _]]; 
-  If[Not@result, throwSomething["testAssertTrueUnevaluating failed"]]
+  result = Catch[AssertTrue[a], "AssertTrue"]; 
+  AssertMatch[_[HoldComplete[AssertTrue[_]], _], result];
  ]];
-
-
-(* ::Subsection:: *)
-(*Test AssertMatch*)
 
 
 (* ::Subsection::Closed:: *)
@@ -672,43 +703,34 @@ AddTest["testRunTestRunsSetUp",
 
 
 AddTest["testFormatSingleSuccessfulTestResult", 
- Module[{formattedResult},
   AddTest["aTest", AssertEquals[1, 1]];
-  formattedResult = RunTest["aTest"];
-  AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "1 run, 0 failed"}]]]
- ]];
+  AssertMatch[Column[{_Graphics, "1 run, 0 failed"}], RunTest["aTest"]];
+];
 
 AddTest["testFormatTwoSuccessfulTestResult", 
- Module[{formattedResult},
   AddTest["aTest", AssertEquals[1, 1]];
   AddTest["anotherTest", AssertEquals[1, 1]];
-  formattedResult = RunTest[];
-  AssertTrue[MatchQ[formattedResult, Column[{_Graphics, "2 run, 0 failed"}]]]
- ]];
+  AssertMatch[Column[{_Graphics, "2 run, 0 failed"}], RunTest[]]
+];
 
 AddTest["testFormatSingleFailedTestResult", 
- Module[{formattedResult},
-  ClearAll[uniqueA]; uniqueB := False;
-  AddTest["aTest", AssertTrue[uniqueB || uniqueA]];
-  formattedResult = RunTest["aTest"];
-  AssertTrue[
-   MatchQ[formattedResult, 
-    Column[{_Graphics, 
-      "1 run, 1 failed", 
-      "aTest - Failed AssertTrue[eMUnit`PackageTests`uniqueB || \
-eMUnit`PackageTests`uniqueA], gave eMUnit`PackageTests`uniqueA"}]]
-   ]]];
+  AddTest["aTest", AssertTrue[False]];
+  AssertMatch[
+   Column[{_Graphics, 
+    "1 run, 1 failed", 
+    "aTest - Failed AssertTrue[False], gave False"}], 
+   RunTest[]];
+];
 
 AddTest["testFormatOneEachTestResult", 
- Module[{formattedResult},
-  AddTest["aTest", AssertEquals[1, 1]];
-  AddTest["anotherTest", AssertEquals[1, -1]];
-  formattedResult = RunTest[];
-  AssertTrue[
-   MatchQ[formattedResult, 
-    Column[{_Graphics, 
-      "2 run, 1 failed", "anotherTest - Failed AssertEquals[1, -1], gave -1"}]]
-  ]]];
+ AddTest["aTest", AssertEquals[1, 1]];
+ AddTest["anotherTest", AssertEquals[1, -1]];
+ AssertMatch[
+  Column[{_Graphics, 
+    "2 run, 1 failed", 
+    "anotherTest - Failed AssertEquals[1, -1], gave -1"}], 
+  RunTest[]];
+];
 
 
 AddTest["testFormatHierarchicalTestResult",
@@ -726,36 +748,33 @@ AddTest["testFormatHierarchicalTestResult",
   EndSuite[];
   formattedResult = RunTest[level1];
   AssertEquals[15, i];
-  AssertTrue[
-   MatchQ[formattedResult, 
-    Column[{_Graphics, 
-      "5 run, 2 failed", 
-      "test2.2 - Failed AssertEquals[1, -1], gave -1",
-      "test3.1 - Failed AssertTrue[1 < 0], gave False"}]]
-  ]
+  AssertMatch[
+   Column[{_Graphics, 
+    "5 run, 2 failed", 
+    "test2.2 - Failed AssertEquals[1, -1], gave -1",
+    "test3.1 - Failed AssertTrue[1 < 0], gave False"}], 
+   formattedResult];
 ]];
 
 
 AddTest["testFormatAssertMessageExpectedMessage", 
- Module[{formattedResult},
-  AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
-  formattedResult = RunTest[];
-  AssertTrue[
-   MatchQ[formattedResult, 
-    Column[{_Graphics, 
+ AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
+ AssertMatch[
+   Column[{_Graphics, 
       "1 run, 1 failed", 
-      "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}]]
-  ]]];
+      "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
+   RunTest[]];
+];
 AddTest["testFormatAssertNoMessage", 
  Module[{formattedResult},
   AddTest["aTest", AssertNoMessage[Drop[{}, 1]]];
   Quiet[formattedResult = RunTest[], Drop::drop];
-  AssertTrue[
-   MatchQ[formattedResult, 
-    Column[{_Graphics, 
+  AssertMatch[
+   Column[{_Graphics, 
       "1 run, 1 failed", 
-      "aTest - Failed AssertNoMessage[Drop[{}, 1]], gave {Drop::drop}"}]]
-  ]]];
+      "aTest - Failed AssertNoMessage[Drop[{}, 1]], gave {Drop::drop}"}], 
+   formattedResult];
+]];
 
 
 (* ::Section::Closed:: *)
