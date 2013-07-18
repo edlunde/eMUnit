@@ -698,7 +698,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test formatTestResult*)
 
 
@@ -767,12 +767,14 @@ AddTest["testFormatAssertMessageExpectedMessage",
 ];
 AddTest["testFormatAssertNoMessage", 
  Module[{formattedResult},
-  AddTest["aTest", AssertNoMessage[Drop[{}, 1]]];
-  Quiet[formattedResult = RunTest[], Drop::drop];
+  mess::aMessage = "Message!";
+  AddTest["aTest", AssertNoMessage[Message[mess::aMessage]]];
+  Quiet[formattedResult = RunTest[], mess::aMessage];
   AssertMatch[
    Column[{_Graphics, 
       "1 run, 1 failed", 
-      "aTest - Failed AssertNoMessage[Drop[{}, 1]], gave {Drop::drop}"}], 
+      "aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
+ gave {eMUnit`PackageTests`mess::aMessage}"}], 
    formattedResult];
 ]];
 
