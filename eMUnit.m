@@ -81,7 +81,7 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Asserts*)
 
 
@@ -160,14 +160,12 @@ currentSuiteSetQ[] := If[Length[suiteStack] > 0, True,
 eMUnitMessages::suiteNotSet = "No suite set with BeginSuite[].";
 
 
-(*ListTests[] /; currentSuiteSetQ[]  := ListTests[currentSuite[]]*)
 ListTests[] := runIfSuiteSet[ListTests[currentSuite[]]]
 ListTests[suite_Symbol] := suite[UnitTests]
 
 
 SetAttributes[AddTest, HoldRest];
 AddTest[name_, test_] := runIfSuiteSet[AddTest[currentSuite[], name, test]]
-(*AddTest[name_, test_] /; currentSuiteSetQ[] := AddTest[currentSuite[], name, test]*)
 AddTest[suite_Symbol, name_, test_] := Module[{},
   suite[name] := test;
   updateTestList[suite, name];
@@ -181,20 +179,14 @@ shouldBeAdded[suite_Symbol, name_] :=
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
-(*AddSuite[subsuite_Symbol] /; currentSuiteSetQ[] := 
-    AddSuite[currentSuite[], subsuite]*)
 AddSuite[subsuite_Symbol] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
 AddSuite[mainSuite_Symbol, subsuite_Symbol] := 
    AddTest[mainSuite, subsuite, runTest[subsuite]]
 
-(*BeginSubsuite[subsuite_Symbol] /; currentSuiteSetQ[] := 
- (AddSuite[subsuite]; 
-  BeginSuite[subsuite])*)
 BeginSubsuite[subsuite_Symbol] := 
   runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
 
 
-(*DeleteTest[name_] /; currentSuiteSetQ[] := DeleteTest[currentSuite[], name]*)
 DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
 DeleteTest[suite_Symbol, name_] := (suite[name] =.; 
   suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];
@@ -244,19 +236,19 @@ formatTestResult[results : {__testResult}] :=
   ]
 formatSummaryString[nResults_Integer, nFailures_Integer] := 
   ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
-formatFailureString[failure_testResult] := 
- Module[{assertString, failureString},
+formatFailureString[failure_testResult] := Module[{assertString, failureString},
   assertString = getResultString[failure];
   getTest[failure] <> " - Failed " <> assertString <>  
     ", gave " <> ToString@getEvaluatedAssertExpr[failure]
- ]
+]
 drawBar[nFailures_Integer] := 
  Graphics[{If[nFailures > 0, Red, Green], 
    Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
   ImageSize -> 600]
 
 countTests[results : {__testResult}] := Length @ 
-    CasesDontEnterHold[results, res_testResult /; ! MatchQ[res[[3]], {__testResult}]]
+    CasesDontEnterHold[results, res_testResult /; Not@isSubsuiteResultQ[res]]
+isSubsuiteResultQ[result_testResult] := MatchQ[getResult[result], {__testResult}]
 extractFailures[results : {__testResult}] := CasesDontEnterHold[results, _?isFailure]
 
 casesHold[HoldComplete[exp_], patt_] := HoldComplete[exp]
@@ -264,6 +256,7 @@ casesHold[exp_, patt_] :=
   (If[MatchQ[exp, patt], Sow[exp]]; casesHold[#, patt] & /@ exp;)
 CasesDontEnterHold[exp_, patt_] := 
   Reap[casesHold[exp, patt]] /. Null -> Sequence[] // Flatten
+
 
 End[];
 
