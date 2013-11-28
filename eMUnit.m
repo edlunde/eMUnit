@@ -239,7 +239,7 @@ formatSummaryString[nResults_Integer, nFailures_Integer] :=
 formatFailureString[failure_testResult] := Module[{assertString, failureString},
   assertString = getResultString[failure];
   getTest[failure] <> " - Failed " <> assertString <>  
-    ", gave " <> ToString@getEvaluatedAssertExpr[failure]
+    ", gave " <> ToString[getEvaluatedAssertExpr[failure], InputForm]
 ]
 drawBar[nFailures_Integer] := 
  Graphics[{If[nFailures > 0, Red, Green], 
@@ -692,7 +692,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test formatTestResult*)
 
 
@@ -768,7 +768,7 @@ AddTest["testFormatAssertNoMessage",
    Column[{_Graphics, 
       "1 run, 1 failed", 
       "aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
- gave {eMUnit`PackageTests`mess::aMessage}"}], 
+ gave {HoldForm[eMUnit`PackageTests`mess::aMessage]}"}], 
    formattedResult];
 ]];
 
