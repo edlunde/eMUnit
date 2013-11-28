@@ -141,7 +141,7 @@ getResult[result_testResult] := result[[3]]
 getEvaluatedAssertExpr[failure_?isFailure] := getResult[failure][[-1]]
 getResultString[failure_?isFailure] := replaceHoldWithToString@@getResult[failure][[1]];
 SetAttributes[replaceHoldWithToString, HoldAll]
-replaceHoldWithToString[expr_] := ToString[Unevaluated[expr]]
+replaceHoldWithToString[expr_] := ToString[Unevaluated[expr], InputForm]
 
 
 (* ::Subsection::Closed:: *)
