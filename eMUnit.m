@@ -3,6 +3,7 @@
 (* ::Text:: *)
 (*ToDo:*)
 (**)
+(*numerical equals*)
 (*report timing*)
 (*reorganize package file for easier development*)
 (**)
@@ -14,7 +15,14 @@
 (*go through UnitTest to get ideas (catch errors from tests? time/memoryConstrained)*)
 
 
-(* ::Section::Closed:: *)
+(* ::Text:: *)
+(**)
+(*bug in eMunit? something to do with earlier definition of function more permissive and not cleared?*)
+(*testIsCorrectExtraVectors - Failed AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]], gave HoldComplete[AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]]]*)
+(**)
+
+
+(* ::Section:: *)
 (*Declarations and usage*)
 
 
@@ -692,7 +700,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Test formatTestResult*)
 
 
