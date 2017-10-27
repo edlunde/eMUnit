@@ -107,10 +107,9 @@ AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
 
 With[{defaultTolerance = 0.001},
  AssertEqualsN::nonNumericTolerance = "Value of option Tolerance -> `1` is not numeric";
- AssertEqualsN::badargs = "Expected arguments are one numeric, one expression, and an optional Tolerance option";
  Options[AssertEqualsN] = {Tolerance -> defaultTolerance};
  SetAttributes[AssertEqualsN, HoldRest];
- AssertEqualsN[shouldBe_?NumericQ, expr_, OptionsPattern[]] := 
+ AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
   With[
    {evaluated = expr, 
     tol = If[NumericQ@OptionValue[Tolerance],
@@ -120,7 +119,6 @@ With[{defaultTolerance = 0.001},
    If[N@Abs[shouldBe - evaluated] <= tol, Null, 
     throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
      evaluated]]];
- AssertEqualsN[args___] := "nothing" /; Message[AssertEqualsN::badargs]
 ]
 
 SetAttributes[AssertMatch, HoldRest]
@@ -376,13 +374,6 @@ AddTest["testAssertEqualsNSuccessLargeTolerance",
 AddTest["testAssertEqualsNNonNumericTolerance",
  AssertMessage[AssertEqualsN::nonNumericTolerance, 
   Catch[AssertEqualsN[1, 5.1, Tolerance -> "string"], "AssertEqualsN"]]
-];
-
-AddTest["testAssertEqualsNNonNumericFirstArgument",
- AssertMessage[AssertEqualsN::badargs, AssertEqualsN["nonNumericInput", 2]];
- Quiet[
-  AssertEquals[AssertEqualsN, Head@AssertEqualsN["nonNumericInput", 2]], 
-  AssertEqualsN::badargs];
 ];
 
 AddTest["testAssertEqualsNThrow", 
