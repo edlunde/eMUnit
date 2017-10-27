@@ -98,17 +98,17 @@ Begin["`Private`"];
 
 
 SetAttributes[AssertEquals, HoldRest]
-AssertEquals[shouldBe_, expr_] := Module[{evaluated = expr},
+AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
  If[Unevaluated[shouldBe] === evaluated, Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
 SetAttributes[AssertMatch, HoldRest]
-AssertMatch[form_, expr_] := Module[{evaluated = expr},
+AssertMatch[form_, expr_] := With[{evaluated = expr},
  If[MatchQ[evaluated, form], Null,
     throwAssertException["AssertMatch", AssertMatch[form, expr], evaluated]]]
 
 SetAttributes[AssertTrue, HoldFirst]
-AssertTrue[expr_] := Module[{evaluated = expr},
+AssertTrue[expr_] := With[{evaluated = expr},
  If[TrueQ@evaluated, Null, 
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
@@ -178,15 +178,15 @@ ListTests[suite_Symbol] := suite[UnitTests]
 
 SetAttributes[AddTest, HoldRest];
 AddTest[name_, test_] := runIfSuiteSet[AddTest[currentSuite[], name, test]]
-AddTest[suite_Symbol, name_, test_] := Module[{},
+AddTest[suite_Symbol, name_, test_] := (
   suite[name] := test;
   updateTestList[suite, name];
   name
-]
-updateTestList[suite_Symbol, name_] := Module[{},
+)
+updateTestList[suite_Symbol, name_] := (
   If[!ListQ@suite[UnitTests], suite[UnitTests] = {}];
   If[shouldBeAdded[suite, name], AppendTo[suite[UnitTests], name]]
-]
+)
 shouldBeAdded[suite_Symbol, name_] := 
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
