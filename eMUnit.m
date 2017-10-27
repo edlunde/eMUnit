@@ -3,9 +3,9 @@
 (* ::Text:: *)
 (*ToDo:*)
 (**)
-(*numerical equals*)
 (*report timing*)
 (*reorganize package file for easier development*)
+(*Check errors in AddTest is caught by our testing*)
 (**)
 (*Maybe:*)
 (*Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly?*)
@@ -23,7 +23,6 @@
 (* ::Text:: *)
 (*bug? something to do with earlier definition of function more permissive and not cleared?*)
 (*testIsCorrectExtraVectors - Failed AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]], gave HoldComplete[AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]]]*)
-(**)
 
 
 (* ::Section::Closed:: *)
@@ -36,6 +35,10 @@ BeginPackage["eMUnit`"];
 AssertEquals::usage = "AssertEquals[value, expression] returns Null if expression \
 evaluates to value. Otherwise it throws an AssertEquals-exception to be caught \
 by RunTest.";
+
+AssertEqualsN::usage = "AssertEquals[value, expression, Tolerance -> 0.001] returns \
+Null if expression evaluates numerically to within Tolerance of value. Otherwise it \
+throws an AssertEquals-exception to be caught by RunTest.";
 
 AssertMatch::usage = "AssertMatch[form, expression] returns Null if expression \
 matches form. Otherwise it throws an AssertMatch-exception to be caught \
@@ -102,6 +105,24 @@ AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
  If[Unevaluated[shouldBe] === evaluated, Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
+With[{defaultTolerance = 0.001},
+ AssertEqualsN::nonNumericTolerance = "Value of option Tolerance -> `1` is not numeric";
+ AssertEqualsN::badargs = "Expected arguments are one numeric, one expression, and an optional Tolerance option";
+ Options[AssertEqualsN] = {Tolerance -> defaultTolerance};
+ SetAttributes[AssertEqualsN, HoldRest];
+ AssertEqualsN[shouldBe_?NumericQ, expr_, OptionsPattern[]] := 
+  With[
+   {evaluated = expr, 
+    tol = If[NumericQ@OptionValue[Tolerance],
+     OptionValue[Tolerance],
+     (Message[AssertEqualsN::nonNumericTolerance,OptionValue[Tolerance]]; 
+      defaultTolerance)]},
+   If[N@Abs[shouldBe - evaluated] <= tol, Null, 
+    throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
+     evaluated]]];
+ AssertEqualsN[args___] := "nothing" /; Message[AssertEqualsN::badargs]
+]
+
 SetAttributes[AssertMatch, HoldRest]
 AssertMatch[form_, expr_] := With[{evaluated = expr},
  If[MatchQ[evaluated, form], Null,
@@ -144,7 +165,7 @@ throwAssertException[name_?isAssertExceptionName, expr_, result_] :=
    Throw[assertException[HoldComplete[expr], result], name]
 isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
 assertExceptionNames = 
-  {"AssertEquals", "AssertMatch", "AssertTrue", "AssertMessage"};
+  {"AssertEquals", "AssertEqualsN", "AssertMatch", "AssertTrue", "AssertMessage"};
 
 createTestResult[suite_Symbol, name_, result_] := testResult[suite, name, result]
 isFailure[result_testResult] := Head[getResult[result]] === assertException
@@ -287,6 +308,7 @@ Begin["`PackageTests`"];
 TestEMUnitPackage[] := RunTest[frameworkTests]
 
 
+(* Used to test AssertEquals, can't use it to test itself *)
 throwSomething[text_] := 
   eMUnit`Private`throwAssertException["AssertEquals", text, ""]
 
@@ -327,6 +349,47 @@ AddTest["testAssertEqualsUnevaluated",
       f[3]]
    , result];
   AssertEquals[3, i];
+ ]];
+
+
+(* ::Subsection::Closed:: *)
+(*Test AssertEqualsN*)
+
+
+AddTest["testAssertEqualsNSuccessExact",
+ AssertEquals[Null, Catch[AssertEqualsN[1, 1], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNSuccessDefaultTolerance",
+ AssertEquals[Null, 
+  Catch[AssertEqualsN[1, 1 + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNSuccessOnExactTolerance",
+ AssertEquals[Null, Catch[AssertEqualsN[1, 2, Tolerance -> 1], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNSuccessLargeTolerance",
+ AssertEquals[Null, Catch[AssertEqualsN[1, 5.1, Tolerance -> 4.5], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNNonNumericTolerance",
+ AssertMessage[AssertEqualsN::nonNumericTolerance, 
+  Catch[AssertEqualsN[1, 5.1, Tolerance -> "string"], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNNonNumericFirstArgument",
+ AssertMessage[AssertEqualsN::badargs, AssertEqualsN["nonNumericInput", 2]];
+ Quiet[
+  AssertEquals[AssertEqualsN, Head@AssertEqualsN["nonNumericInput", 2]], 
+  AssertEqualsN::badargs];
+];
+
+AddTest["testAssertEqualsNThrow", 
+ With[{x = 1.7},
+  AssertEquals[eMUnit`Private`assertException[
+                   HoldComplete[AssertEqualsN[1, x, Tolerance -> 0.5]], x], 
+               Catch[AssertEqualsN[1, x, Tolerance -> 0.5], "AssertEqualsN"]]
  ]];
 
 
