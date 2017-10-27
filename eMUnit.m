@@ -8,6 +8,7 @@
 (*reorganize package file for easier development*)
 (**)
 (*Maybe:*)
+(*Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly?*)
 (*errors - catching unexpected exceptions (and messages)*)
 (*Logging?*)
 (*redesign public interface, RunTest called something else?*)
@@ -16,13 +17,16 @@
 
 
 (* ::Text:: *)
-(**)
-(*bug in eMunit? something to do with earlier definition of function more permissive and not cleared?*)
+(*bug? counting teardown in number of tests run?*)
+
+
+(* ::Text:: *)
+(*bug? something to do with earlier definition of function more permissive and not cleared?*)
 (*testIsCorrectExtraVectors - Failed AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]], gave HoldComplete[AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]]]*)
 (**)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Declarations and usage*)
 
 
@@ -82,7 +86,7 @@ for the eMUnit package.";
 eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit package.";
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Implementations*)
 
 
@@ -269,7 +273,7 @@ CasesDontEnterHold[exp_, patt_] :=
 End[];
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Tests*)
 
 
