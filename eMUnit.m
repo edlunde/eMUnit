@@ -8,7 +8,7 @@
 (*Check errors in AddTest is caught by our testing*)
 (**)
 (*Maybe:*)
-(*Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly?*)
+(*Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly? Or a function ClearSuite to do it explicitly?*)
 (*errors - catching unexpected exceptions (and messages)*)
 (*Logging?*)
 (*redesign public interface, RunTest called something else?*)
@@ -89,7 +89,7 @@ for the eMUnit package.";
 eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit package.";
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Implementations*)
 
 
@@ -102,7 +102,9 @@ Begin["`Private`"];
 
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
- If[Unevaluated[shouldBe] === evaluated, Null, 
+ If[Unevaluated[shouldBe] === evaluated, (* Unevaluated to make sure shouldBe is 
+      only run twice, reduces possibility of confusion if there are side effects *)
+  Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
 With[{defaultTolerance = 0.001},
@@ -224,7 +226,7 @@ DeleteTest[suite_Symbol, name_] := (suite[name] =.;
   name)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*RunTest*)
 
 
@@ -233,7 +235,8 @@ RunTest[suite_Symbol] := formatTestResult[runTest[suite]]
 RunTest[stringPattern_?isStringPatternQ] := 
   runIfSuiteSet[RunTest[currentSuite[], stringPattern]]
 
-RunTest[suite_Symbol, stringPattern_?isStringPatternQ] /; testExists[suite, stringPattern]:= 
+RunTest[suite_Symbol, stringPattern_?isStringPatternQ] /; 
+ testExists[suite, stringPattern] := 
     formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
 selectTests[suite_Symbol, pattern_] := 
   Select[ListTests[suite], StringQ[#] && StringMatchQ[#, pattern] &]
@@ -252,7 +255,7 @@ runTest[suite_Symbol, name_] := Module[{result},
  ]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Format*)
 
 
@@ -287,6 +290,10 @@ casesHold[exp_, patt_] :=
   (If[MatchQ[exp, patt], Sow[exp]]; casesHold[#, patt] & /@ exp;)
 CasesDontEnterHold[exp_, patt_] := 
   Reap[casesHold[exp, patt]] /. Null -> Sequence[] // Flatten
+
+
+(* ::Subsection:: *)
+(*Tail*)
 
 
 End[];
