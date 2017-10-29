@@ -96,10 +96,26 @@ eMUnitMessages::usage = "eMUnitMessages::tag - Messages used in the eMUnit packa
 Begin["`Private`"];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Asserts*)
 
 
+assertExceptionNames = {}; (* Added for each assert where defined *)
+isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
+
+SetAttributes[throwAssertException, HoldRest];
+throwAssertException[name_?isAssertExceptionName, callExpression_, result_] := 
+   Throw[assertException[HoldComplete[callExpression], result], name]
+
+getAssertExceptionExpr[exception_assertException] := exception[[1]]
+getAssertExceptionResult[exception_assertException] := exception[[2]]
+getAssertExceptionExprString[exception_assertException] := 
+ replaceHoldWithToString@@getAssertExceptionExpr[exception]
+SetAttributes[replaceHoldWithToString, HoldAll]
+replaceHoldWithToString[expr_] := ToString[Unevaluated[expr], InputForm]
+
+
+AppendTo[assertExceptionNames, "AssertEquals"];
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
  If[Unevaluated[shouldBe] === evaluated, (* Unevaluated to make sure shouldBe is 
@@ -107,6 +123,7 @@ AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
   Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
+AppendTo[assertExceptionNames, "AssertEqualsN"];
 With[{defaultTolerance = 0.001},
  AssertEqualsN::nonNumericTolerance = "Value of option Tolerance -> `1` is not numeric";
  Options[AssertEqualsN] = {Tolerance -> defaultTolerance};
@@ -123,16 +140,20 @@ With[{defaultTolerance = 0.001},
      evaluated]]];
 ]
 
+AppendTo[assertExceptionNames, "AssertMatch"];
 SetAttributes[AssertMatch, HoldRest]
 AssertMatch[form_, expr_] := With[{evaluated = expr},
  If[MatchQ[evaluated, form], Null,
     throwAssertException["AssertMatch", AssertMatch[form, expr], evaluated]]]
 
+AppendTo[assertExceptionNames, "AssertTrue"];
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] := With[{evaluated = expr},
  If[TrueQ@evaluated, Null, 
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
+
+AppendTo[assertExceptionNames, "AssertMessage"];
 
 SetAttributes[{AssertNoMessage, AssertMessage, 
                assertMessage, quietEvaluateAndCheckMessages}, HoldAll]
@@ -158,23 +179,6 @@ quietEvaluateAndCheckMessages[expectedMessages_, expr_] := Block[{$MessageList =
    {onlyExpectedMessagesQ, $MessageList}]]
 passOnMessages[uncaughtMessages_] := 
   (Unprotect[$MessageList]; $MessageList = uncaughtMessages; Protect[$MessageList];)
-
-
-SetAttributes[throwAssertException, HoldRest];
-throwAssertException[name_?isAssertExceptionName, expr_, result_] := 
-   Throw[assertException[HoldComplete[expr], result], name]
-isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
-assertExceptionNames = 
-  {"AssertEquals", "AssertEqualsN", "AssertMatch", "AssertTrue", "AssertMessage"};
-
-createTestResult[suite_Symbol, name_, result_] := testResult[suite, name, result]
-isFailure[result_testResult] := Head[getResult[result]] === assertException
-getTest[result_testResult] := result[[2]]
-getResult[result_testResult] := result[[3]]
-getEvaluatedAssertExpr[failure_?isFailure] := getResult[failure][[-1]]
-getResultString[failure_?isFailure] := replaceHoldWithToString@@getResult[failure][[1]];
-SetAttributes[replaceHoldWithToString, HoldAll]
-replaceHoldWithToString[expr_] := ToString[Unevaluated[expr], InputForm]
 
 
 (* ::Subsection::Closed:: *)
@@ -255,6 +259,17 @@ runTest[suite_Symbol, name_] := Module[{result},
  ]
 
 
+createTestResult[suite_Symbol, name_, result_] := testResult[suite, name, result]
+(*getSuite[result_testResult] := result[[1]]*)
+getTest[result_testResult] := result[[2]]
+getResult[result_testResult] := result[[3]]
+isFailure[result_testResult] := Head[getResult[result]] === assertException
+
+getFailureResult[failure_?isFailure] := getAssertExceptionResult[getResult[failure]]
+getFailureExpressionString[failure_?isFailure] := 
+ getAssertExceptionExprString[getResult[failure]];
+
+
 (* ::Subsection:: *)
 (*Format*)
 
@@ -270,11 +285,10 @@ formatTestResult[results : {__testResult}] :=
   ]
 formatSummaryString[nResults_Integer, nFailures_Integer] := 
   ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
-formatFailureString[failure_testResult] := Module[{assertString, failureString},
-  assertString = getResultString[failure];
-  getTest[failure] <> " - Failed " <> assertString <>  
-    ", gave " <> ToString[getEvaluatedAssertExpr[failure], InputForm]
-]
+formatFailureString[failure_testResult] := 
+  getTest[failure] <> " - Failed " <> getFailureExpressionString[failure] <>  
+    ", gave " <> ToString[getFailureResult[failure], InputForm]
+    
 drawBar[nFailures_Integer] := 
  Graphics[{If[nFailures > 0, Red, Green], 
    Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
@@ -299,7 +313,7 @@ CasesDontEnterHold[exp_, patt_] :=
 End[];
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Tests*)
 
 
@@ -765,7 +779,7 @@ AddTest["testRunTestRunsSetUp",
  ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Test formatTestResult*)
 
 
