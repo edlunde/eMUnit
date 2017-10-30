@@ -155,7 +155,7 @@ AddTest["testAssertTrueUnevaluating",
  ]];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test AssertMessage*)
 
 
