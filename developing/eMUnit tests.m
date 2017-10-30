@@ -102,6 +102,22 @@ AddTest["testAssertEqualsNThrow",
  ]];
 
 
+(* ::Subsubsection:: *)
+(*Test AssertMember*)
+
+
+AddTest["testAssertMemberSuccess",
+ AssertEquals[Null, Catch[AssertMember[{1, 2, 3}, 1], "AssertMember"]];
+ AssertEquals[Null, Catch[AssertMember[{"ab", 2, 3}, "a"<>"b"], "AssertMember"]];
+ AssertEquals[Null, Catch[AssertMember[{{1, 2}, {3, 4}, 3}, {1, 2}], "AssertMember"]];
+];
+
+AddTest["testAssertMemberThrow", 
+  AssertEquals[eMUnit`Private`assertException[HoldComplete[AssertMember[{1, 3}, 2]], 2], 
+               Catch[AssertMember[{1, 3}, 2], "AssertMember"]]
+ ];
+
+
 (* ::Subsubsection::Closed:: *)
 (*Test AssertMatch*)
 
@@ -155,7 +171,7 @@ AddTest["testAssertTrueUnevaluating",
  ]];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Test AssertMessage*)
 
 

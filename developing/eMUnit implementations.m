@@ -4,7 +4,7 @@
 (*Implementations*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Asserts*)
 
 
@@ -26,8 +26,7 @@ replaceHoldWithToString[expr_] := ToString[Unevaluated[expr], InputForm]
 AppendTo[assertExceptionNames, "AssertEquals"];
 SetAttributes[AssertEquals, HoldRest]
 AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
- If[Unevaluated[shouldBe] === evaluated, (* Unevaluated to make sure shouldBe is 
-      only run twice, reduces possibility of confusion if there are side effects *)
+ If[Unevaluated[shouldBe] === evaluated,
   Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
@@ -47,6 +46,13 @@ With[{defaultTolerance = 0.001},
     throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
      evaluated]]];
 ]
+
+AppendTo[assertExceptionNames, "AssertMember"];
+SetAttributes[AssertMember, HoldRest]
+AssertMember[shouldBe_List, expr_] := With[{evaluated = expr},
+ If[MemberQ[shouldBe, evaluated],
+  Null, 
+  throwAssertException["AssertMember", AssertMember[shouldBe, expr], evaluated]]]
 
 AppendTo[assertExceptionNames, "AssertMatch"];
 SetAttributes[AssertMatch, HoldRest]
@@ -138,7 +144,7 @@ DeleteTest[suite_Symbol, name_] := (suite[name] =.;
   name)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*RunTest*)
 
 
@@ -181,7 +187,7 @@ getFailureExpressionString[failure_?isFailure] :=
  getAssertExceptionExprString[getResult[failure]]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Format*)
 
 
