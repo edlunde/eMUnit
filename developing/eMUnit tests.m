@@ -349,10 +349,10 @@ addRecheckCurrentSuiteTest @@@ Unevaluated[{
     "anotherTest"},
   {"RunTest", 
    (AddTest[anotherSuite, "anotherTest", 1+1]; RunTest[]),
-    Column[{eMUnit`Private`drawBar[0], "1 run, 0 failed"}]},
+    Column[{eMUnit`Private`drawBar[0], "1 run in 0. s, 0 failed"}]},
   {"RunTestPattern", 
    (AddTest[anotherSuite, "anotherTest", 1+1]; RunTest["anotherTest"]),
-    Column[{eMUnit`Private`drawBar[0], "1 run, 0 failed"}]}
+    Column[{eMUnit`Private`drawBar[0], "1 run in 0. s, 0 failed"}]}
 }];
 
 
@@ -494,20 +494,20 @@ AddTest["testRunTestRunsSetUp",
 
 AddTest["testFormatSingleSuccessfulTestResult", 
   AddTest["aTest", AssertEquals[1, 1]];
-  AssertMatch[Column[{_Graphics, "1 run, 0 failed"}], RunTest["aTest"]];
+  AssertMatch[Column[{_Graphics, "1 run in 0. s, 0 failed"}], RunTest["aTest"]];
 ];
 
 AddTest["testFormatTwoSuccessfulTestResult", 
   AddTest["aTest", AssertEquals[1, 1]];
   AddTest["anotherTest", AssertEquals[1, 1]];
-  AssertMatch[Column[{_Graphics, "2 run, 0 failed"}], RunTest[]]
+  AssertMatch[Column[{_Graphics, "2 run in 0. s, 0 failed"}], RunTest[]]
 ];
 
 AddTest["testFormatSingleFailedTestResult", 
   AddTest["aTest", AssertTrue[False]];
   AssertMatch[
    Column[{_Graphics, 
-    "1 run, 1 failed", 
+    "1 run in 0. s, 1 failed", 
     "aTest - Failed AssertTrue[False], gave False"}], 
    RunTest[]];
 ];
@@ -517,7 +517,7 @@ AddTest["testFormatOneEachTestResult",
  AddTest["anotherTest", AssertEquals[1, -1]];
  AssertMatch[
   Column[{_Graphics, 
-    "2 run, 1 failed", 
+    "2 run in 0. s, 1 failed", 
     "anotherTest - Failed AssertEquals[1, -1], gave -1"}], 
   RunTest[]];
 ];
@@ -540,7 +540,7 @@ AddTest["testFormatHierarchicalTestResult",
   AssertEquals[15, i];
   AssertMatch[
    Column[{_Graphics, 
-    "5 run, 2 failed", 
+    "5 run in 0. s, 2 failed", 
     "test2.2 - Failed AssertEquals[1, -1], gave -1",
     "test3.1 - Failed AssertTrue[1 < 0], gave False"}], 
    formattedResult];
@@ -551,7 +551,7 @@ AddTest["testFormatAssertMessageExpectedMessage",
  AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
  AssertMatch[
    Column[{_Graphics, 
-      "1 run, 1 failed", 
+      "1 run in 0. s, 1 failed", 
       "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
    RunTest[]];
 ];
@@ -562,7 +562,7 @@ AddTest["testFormatAssertNoMessage",
   Quiet[formattedResult = RunTest[], mess::aMessage];
   AssertMatch[
    Column[{_Graphics, 
-      "1 run, 1 failed", 
+      "1 run in 0. s, 1 failed", 
       "aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
  gave {HoldForm[eMUnit`PackageTests`mess::aMessage]}"}], 
    formattedResult];

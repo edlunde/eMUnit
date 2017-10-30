@@ -138,7 +138,7 @@ DeleteTest[suite_Symbol, name_] := (suite[name] =.;
   name)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*RunTest*)
 
 
@@ -159,40 +159,45 @@ eMUnitMessages::nonexistentTest = "No test in suite '`1`' matches '`2`'";
 isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
 
 runTest[suite_Symbol] := runTest[suite, #] & /@ ListTests[suite]
-runTest[suite_Symbol, name_] := Module[{result},
-  suite["Set Up"];
-  result = Catch[suite[name], exceptionName_?isAssertExceptionName];
-  suite["Tear Down"];
-  createTestResult[suite, name, result]
+runTest[suite_Symbol, name_] := Module[{result, time},
+  time = First@Timing[
+   suite["Set Up"];
+   result = Catch[suite[name], exceptionName_?isAssertExceptionName];
+   suite["Tear Down"]];
+  createTestResult[suite, name, result, time]
  ]
 
 
-createTestResult[suite_Symbol, name_, result_] := testResult[suite, name, result]
+createTestResult[suite_Symbol, name_, result_, time_?NumericQ] := 
+ testResult[suite, name, result, time]
 (*getSuite[result_testResult] := result[[1]]*)
 getTest[result_testResult] := result[[2]]
 getResult[result_testResult] := result[[3]]
-isFailure[result_testResult] := Head[getResult[result]] === assertException
+getTime[result_testResult] := result[[4]]
 
+isFailure[result_testResult] := Head[getResult[result]] === assertException
 getFailureResult[failure_?isFailure] := getAssertExceptionResult[getResult[failure]]
 getFailureExpressionString[failure_?isFailure] := 
- getAssertExceptionExprString[getResult[failure]];
+ getAssertExceptionExprString[getResult[failure]]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Format*)
 
 
 formatTestResult[results : {__testResult}] :=
- Module[{reportString, failures, nTests, nFailures},
+ Module[{reportString, nTests, time, failures, nFailures},
   nTests = countTests[results];
+  time = Total[getTime /@ results];
   failures = extractFailures[results];
   nFailures = Length@failures;
   Column[Join[{drawBar[nFailures], 
-               formatSummaryString[nTests, nFailures]},
+               formatSummaryString[nTests, time, nFailures]},
               formatFailureString /@ failures]]
   ]
-formatSummaryString[nResults_Integer, nFailures_Integer] := 
-  ToString[nResults] <> " run, " <> ToString[nFailures] <> " failed"
+formatSummaryString[nResults_Integer, time_?NumericQ, nFailures_Integer] := 
+  ToString[nResults] <> " run in " <> ToString@Round[time, 0.01] <> " s, " <> 
+   ToString[nFailures] <> " failed"
 formatFailureString[failure_testResult] := 
   getTest[failure] <> " - Failed " <> getFailureExpressionString[failure] <>  
     ", gave " <> ToString[getFailureResult[failure], InputForm]

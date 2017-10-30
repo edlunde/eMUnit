@@ -1,8 +1,8 @@
 ToDo:
 
-report timing
-reorganize package file for easier development
+verbose - report timing for each test and suite
 Check errors in AddTest is caught by our testing
+makeScript - close all sections
 
 Maybe:
 Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly? Or a function ClearSuite to do it explicitly?
