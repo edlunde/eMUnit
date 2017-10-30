@@ -4,7 +4,7 @@
 (*Implementations*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Asserts*)
 
 
@@ -30,41 +30,73 @@ AssertEquals[shouldBe_, expr_] := With[{evaluated = expr},
   Null, 
   throwAssertException["AssertEquals", AssertEquals[shouldBe, expr], evaluated]]]
 
-AppendTo[assertExceptionNames, "AssertEqualsN"];
-With[{defaultTolerance = 0.001},
- AssertEqualsN::nonNumericTolerance = "Value of option Tolerance -> `1` is not numeric";
- Options[AssertEqualsN] = {Tolerance -> defaultTolerance};
- SetAttributes[AssertEqualsN, HoldRest];
- AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
-  With[
-   {evaluated = expr, 
-    tol = If[NumericQ@OptionValue[Tolerance],
-     OptionValue[Tolerance],
-     (Message[AssertEqualsN::nonNumericTolerance,OptionValue[Tolerance]]; 
-      defaultTolerance)]},
-   If[N@Abs[shouldBe - evaluated] <= tol, Null, 
-    throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
-     evaluated]]];
-]
-
-AppendTo[assertExceptionNames, "AssertMember"];
-SetAttributes[AssertMember, HoldRest]
-AssertMember[shouldBe_List, expr_] := With[{evaluated = expr},
- If[MemberQ[shouldBe, evaluated],
-  Null, 
-  throwAssertException["AssertMember", AssertMember[shouldBe, expr], evaluated]]]
-
 AppendTo[assertExceptionNames, "AssertMatch"];
 SetAttributes[AssertMatch, HoldRest]
 AssertMatch[form_, expr_] := With[{evaluated = expr},
  If[MatchQ[evaluated, form], Null,
     throwAssertException["AssertMatch", AssertMatch[form, expr], evaluated]]]
-
+    
 AppendTo[assertExceptionNames, "AssertTrue"];
 SetAttributes[AssertTrue, HoldFirst]
 AssertTrue[expr_] := With[{evaluated = expr},
  If[TrueQ@evaluated, Null, 
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
+
+
+With[{defaultTolerance = 0.001},
+ eMUnitMessages::nonNumericTolerance = "Value of option Tolerance -> `1` is not numeric,\
+ using default tolerance " <> ToString@defaultTolerance;
+ 
+ AppendTo[assertExceptionNames, "AssertEqualsN"];
+ SetAttributes[AssertEqualsN, HoldRest];
+ Options[AssertEqualsN] = {Tolerance -> defaultTolerance};
+ AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
+  With[
+   {evaluated = expr, 
+    tol = If[NumericQ@OptionValue[Tolerance],
+     OptionValue[Tolerance],
+     (Message[eMUnitMessages::nonNumericTolerance, OptionValue[Tolerance]]; 
+      defaultTolerance)]}, (* Falling back on default tolerance and sending warning *)
+   If[N@Abs[shouldBe - evaluated] <= tol, Null, 
+    throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
+     evaluated]]];
+
+AppendTo[assertExceptionNames, "AssertMemberN"];
+SetAttributes[AssertMemberN, HoldRest];
+Options[AssertMemberN] = {Tolerance -> defaultTolerance};
+AssertMemberN[candidates_List, expr_, OptionsPattern[]] := 
+ With[{evaluated = expr,
+  tol = If[NumericQ@OptionValue[Tolerance],
+     OptionValue[Tolerance],
+     (Message[eMUnitMessages::nonNumericTolerance, OptionValue[Tolerance]]; 
+      defaultTolerance)]}, (* Falling back on default tolerance and sending warning *)
+ If[memberQN[candidates, evaluated, tol],
+  Null, 
+  throwAssertException["AssertMemberN", AssertMemberN[candidates, expr, Tolerance -> tol],
+   evaluated]]];
+
+]
+
+memberQN[candidates_List, evaluated_, tol_] :=
+ Or@@(matchQN[#, evaluated, tol] & /@ candidates)
+
+ClearAll@matchQN
+matchQN[candidate_?NumericQ, evaluated_?NumericQ, tol_] :=
+ Abs[candidate - evaluated ] <= tol
+matchQN[candidate_, evaluated_, tol_] /; AtomQ@candidate || AtomQ@evaluated := 
+ candidate === evaluated
+matchQN[candidate_, evaluated_, tol_] := 
+ nonNumericStructureMatches[candidate, evaluated] &&
+  numericalLeavesMatchToToleranceQ[candidate, evaluated, tol]
+ 
+nonNumericStructureMatches[candidate_, evaluated_] := 
+ MatchQ[evaluated, replaceNumericalWithBlank[candidate]]
+replaceNumericalWithBlank[expr_] := expr /. _?NumericQ -> Blank[]
+
+numericalLeavesMatchToToleranceQ[candidate_, evaluated_, tol_] :=
+ And@@( 
+  (Abs[Extract[candidate, #] - Extract[evaluated, #]] <= tol) & /@  
+    Position[candidate, _?NumericQ])
 
 
 AppendTo[assertExceptionNames, "AssertMessage"];

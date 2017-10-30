@@ -18,9 +18,9 @@ Null if expression evaluates numerically to within Tolerance of value. Otherwise
 throws an AssertEquals-exception to be caught by RunTest.";
 
 
-AssertMember::usage = "AssertMember[list, expression] returns Null if expression \
-is a member of list. Otherwise it throws an AssertMember-exception to be caught \
-by RunTest.";
+AssertMemberN::usage = "AssertMemberN[list, expression, Tolerance -> 0.001] returns \
+Null if expression is a member of list to within Tolerance. Otherwise it throws an \
+AssertMember-exception to be caught by RunTest.";
 
 
 AssertMatch::usage = "AssertMatch[form, expression] returns Null if expression \

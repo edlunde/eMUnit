@@ -7,10 +7,13 @@ Check errors in AddTest is caught by our testing
 
 refactor tests to not explicitly depend on assertException?
 Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly? Or a function ClearSuite to do it explicitly?
-errors - catching unexpected exceptions (and messages)
+
+should passOnMessages append to $MessageList instead?
+
+errors - catching unexpected exceptions (and messages)?
 Logging?
 redesign public interface, RunTest called something else?
-Test coverage analysis
+Test coverage analysis?
 go through UnitTest to get ideas (catch errors from tests? time/memoryConstrained)
 
 

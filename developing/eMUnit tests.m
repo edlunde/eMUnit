@@ -8,9 +8,9 @@
 (*Helper functions*)
 
 
-(* Used to test AssertEquals, can't use it to test itself *)
+(* Used to test AssertEquals and AssertMatch, can't use them to test themselves *)
 throwSomething[text_] := 
-  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
+  eMUnit`Private`throwAssertException["AssertEquals or AssertMatch", text, ""]
 
 
 (* ::Subsection::Closed:: *)
@@ -69,56 +69,6 @@ AddTest["testAssertEqualsUnevaluated",
 
 
 (* ::Subsubsection::Closed:: *)
-(*Test AssertEqualsN*)
-
-
-AddTest["testAssertEqualsNSuccessExact",
- AssertEquals[Null, Catch[AssertEqualsN[1, 1], "AssertEqualsN"]]
-];
-
-AddTest["testAssertEqualsNSuccessDefaultTolerance",
- AssertEquals[Null, 
-  Catch[AssertEqualsN[1, 1 + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
-];
-
-AddTest["testAssertEqualsNSuccessOnExactTolerance",
- AssertEquals[Null, Catch[AssertEqualsN[1, 2, Tolerance -> 1], "AssertEqualsN"]]
-];
-
-AddTest["testAssertEqualsNSuccessLargeTolerance",
- AssertEquals[Null, Catch[AssertEqualsN[1, 5.1, Tolerance -> 4.5], "AssertEqualsN"]]
-];
-
-AddTest["testAssertEqualsNNonNumericTolerance",
- AssertMessage[AssertEqualsN::nonNumericTolerance, 
-  Catch[AssertEqualsN[1, 5.1, Tolerance -> "string"], "AssertEqualsN"]]
-];
-
-AddTest["testAssertEqualsNThrow", 
- With[{x = 1.7},
-  AssertEquals[eMUnit`Private`assertException[
-                   HoldComplete[AssertEqualsN[1, x, Tolerance -> 0.5]], x], 
-               Catch[AssertEqualsN[1, x, Tolerance -> 0.5], "AssertEqualsN"]]
- ]];
-
-
-(* ::Subsubsection:: *)
-(*Test AssertMember*)
-
-
-AddTest["testAssertMemberSuccess",
- AssertEquals[Null, Catch[AssertMember[{1, 2, 3}, 1], "AssertMember"]];
- AssertEquals[Null, Catch[AssertMember[{"ab", 2, 3}, "a"<>"b"], "AssertMember"]];
- AssertEquals[Null, Catch[AssertMember[{{1, 2}, {3, 4}, 3}, {1, 2}], "AssertMember"]];
-];
-
-AddTest["testAssertMemberThrow", 
-  AssertEquals[eMUnit`Private`assertException[HoldComplete[AssertMember[{1, 3}, 2]], 2], 
-               Catch[AssertMember[{1, 3}, 2], "AssertMember"]]
- ];
-
-
-(* ::Subsubsection::Closed:: *)
 (*Test AssertMatch*)
 
 
@@ -169,6 +119,92 @@ AddTest["testAssertTrueUnevaluating",
   result = Catch[AssertTrue[a], "AssertTrue"]; 
   AssertMatch[_[HoldComplete[AssertTrue[_]], _], result];
  ]];
+
+
+(* ::Subsubsection::Closed:: *)
+(*Test AssertEqualsN*)
+
+
+AddTest["testAssertEqualsNSuccessExact",
+ AssertEquals[Null, Catch[AssertEqualsN[1, 1], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNSuccessDefaultTolerance",
+ AssertEquals[Null, 
+  Catch[AssertEqualsN[1, 1 + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNSuccessOnExactTolerance",
+ AssertEquals[Null, Catch[AssertEqualsN[1, 2, Tolerance -> 1], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNSuccessLargeTolerance",
+ AssertEquals[Null, Catch[AssertEqualsN[1, 5.1, Tolerance -> 4.5], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNNonNumericTolerance",
+ AssertMessage[eMUnitMessages::nonNumericTolerance, 
+  Catch[AssertEqualsN[1, 5.1, Tolerance -> "string"], "AssertEqualsN"]]
+];
+
+AddTest["testAssertEqualsNThrow", 
+ With[{x = 1.7},
+  AssertEquals[eMUnit`Private`assertException[
+                   HoldComplete[AssertEqualsN[1, x, Tolerance -> 0.5]], x], 
+               Catch[AssertEqualsN[1, x, Tolerance -> 0.5], "AssertEqualsN"]]
+ ]];
+
+
+(* ::Subsubsection:: *)
+(*Test AssertMemberN*)
+
+
+AddTest["testAssertMemberNSuccessExact",
+ AssertEquals[Null, Catch[AssertMemberN[{1, 2, 3}, 1], "AssertMemberN"]];
+ AssertEquals[Null, Catch[AssertMemberN[{{1, 2}, {3, 4}, 3}, {1, 2}], "AssertMemberN"]];
+];
+
+AddTest["testAssertMemberNSuccessDefaultTolerance",
+AssertEquals[Null, Catch[
+   AssertMemberN[{1, 2, 3}, 1 + 0.1*Tolerance /. Options[AssertMemberN]], "AssertMemberN"]]
+];
+
+AddTest["testAssertMemberNSuccessOnExactTolerance",
+ AssertEquals[Null, Catch[AssertMemberN[{1, 3}, 2, Tolerance -> 1], "AssertMemberN"]];
+ AssertEquals[Null, Catch[AssertMemberN[{{1}, {3}}, {2}, Tolerance -> 1], "AssertMemberN"]];
+];
+
+AddTest["testAssertMemberNSuccessLargeTolerance",
+ AssertEquals[Null, 
+  Catch[AssertMemberN[{1, 0}, 5.1, Tolerance -> 4.5], "AssertMemberN"]];
+ AssertEquals[Null, 
+   Catch[AssertMemberN[{{1}, {0}}, {5.1}, Tolerance -> 4.5], "AssertMemberN"]];
+];
+
+AddTest["testAssertMemberNSuccessMixedArguments",
+ AssertEquals[Null, 
+  Catch[AssertMemberN[{1, "a"}, 5.1, Tolerance -> 4.5], "AssertMemberN"]];
+ AssertEquals[Null, 
+   Catch[AssertMemberN[{{0, "a"}, {1}}, {5.1}, Tolerance -> 4.5], "AssertMemberN"]];
+ AssertEquals[Null, 
+  Catch[AssertMemberN[{{1, "a"}, 2, 3}, {1, "a"}], "AssertMemberN"]];
+ AssertEquals[Null, 
+  Catch[AssertMemberN[{{2}, {1, "a"}, 3}, {1, "a"}], "AssertMemberN"]];
+];
+
+AddTest["testAssertMemberNNonNumericTolerance",
+ AssertMessage[eMUnitMessages::nonNumericTolerance, 
+  Catch[AssertMemberN[{2, 3, 4.}, 5.1, Tolerance -> "string"], "AssertMemberN"]]
+];
+
+AddTest["testAssertMemberNThrow", 
+  AssertEquals[eMUnit`Private`assertException[HoldComplete[
+                 AssertMemberN[{1, 3}, 2, Tolerance -> 0.3]], 2], 
+   Catch[AssertMemberN[{1, 3}, 2, Tolerance -> 0.3], "AssertMemberN"]];
+  AssertEquals[eMUnit`Private`assertException[HoldComplete[
+                 AssertMemberN[{2, {1, "b"}, 3}, {1, "a"}, Tolerance -> 0.3]], {1, "a"}], 
+   Catch[AssertMemberN[{2, {1, "b"}, 3}, {1, "a"}, Tolerance -> 0.3], "AssertMemberN"]];
+ ];
 
 
 (* ::Subsubsection::Closed:: *)
