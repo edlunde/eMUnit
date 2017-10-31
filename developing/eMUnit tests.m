@@ -28,46 +28,42 @@ AddTest["Tear Down",
  ClearAll[mytests, anotherSuite]];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Shared functions*)
 
 
-(* Used to test AssertEquals and AssertMatch, can't use them to test themselves *)
+(* Used to test AssertEquals, can't use them to test themselves *)
 (* Only works when run from complete package due to explicit mention of context eMUnit`Private` *)
-throwSomething[name_?eMUnit`Private`isAssertExceptionName, text_] := 
-  eMUnit`Private`throwAssertException[name, text, ""]
+throwSomething[text_] := 
+  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test shared functions*)
 
 
 With[{warningStringPart1 = "!!! testThrowSomething failed, gave ",
- warningStringPart2 ="\n Cannot trust tests of AssertEquals and AssertMatch"},
+ warningStringPart2 ="\n Cannot trust tests of AssertEquals."},
 Module[{result},
- result = Catch[throwSomething["AssertEquals", "first testThrowSomething throw"], 
+ result = Catch[throwSomething["testThrowSomething throw"], 
    "AssertEquals"];
- If[Not[result === eMUnit`Private`assertException[HoldComplete["first testThrowSomething throw"], ""]], 
+ If[Not[result === 
+        eMUnit`Private`assertException[HoldComplete["testThrowSomething throw"], ""]], 
   {Print@#, Throw@#} &[warningStringPart1 <> ToString@result <> warningStringPart2]];
-  
- result = Catch[throwSomething["AssertMatch", "second testThrowSomething throw"], 
-   "AssertMatch"];
- If[Not[result === eMUnit`Private`assertException[HoldComplete["second testThrowSomething throw"], ""]], 
-  {Print@#, Throw@#} &[warningStringPart1 <> ToString@result <> warningStringPart2]];
- ]];
+]];
 
 
 (* ::Subsection:: *)
 (*Test Asserts*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test AssertEquals*)
 
 
 AddTest["testAssertEqualsSuccess",
  If[Not[Catch[AssertEquals[1, 1], "AssertEquals"] === Null], 
-   throwSomething["AssertEquals", "testAssertEqualsSuccess failed"]]
+   throwSomething["testAssertEqualsSuccess failed"]]
 ];
 
 AddTest["testAssertEqualsThrow", 
@@ -75,7 +71,7 @@ AddTest["testAssertEqualsThrow",
   If[Catch[AssertEquals[1, i], "AssertEquals"] === 
       eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
      Null,
-     throwSomething["AssertEquals", "testAssertEqualsThrow failed"]]
+     throwSomething["testAssertEqualsThrow failed"]]
  ]];
 
 AddTest["testAssertEqualsUnevaluated",
@@ -147,20 +143,15 @@ AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
 
 
 AddTest["testAssertTrueSuccess", 
- Module[{a, result},
-  a := True;
-  result = Catch[AssertTrue[a], "AssertTrue"] === Null;
-  If[Not@result, throwSomething["testAssertTrueSuccess failed"]]
- ]];
+ AssertEquals[Null, Catch[AssertTrue[1 == 1], "AssertTrue"]];
+ AssertEquals[Null, Catch[AssertTrue[2 > 1], "AssertTrue"]];
+ AssertEquals[Null, Catch[AssertTrue[NumericQ@0.2], "AssertTrue"]];
+];
 
 AddTest["testAssertTrueFailure", 
- Module[{a, result},
-  a := False;
-  result = Catch[AssertTrue[a], "AssertTrue"];
-  If[result === eMUnit`Private`assertException[HoldComplete[AssertTrue[a]], False], 
-     Null, 
-     throwSomething["testAssertTrueFailure failed"]]
- ]];
+ AssertEquals[eMUnit`Private`assertException[HoldComplete[AssertTrue[1 < 0]], False],
+  Catch[AssertTrue[1 < 0], "AssertTrue"]];
+];
 
 AddTest["testAssertTrueUnevaluating",
  Module[{a, result}, ClearAll[a]; 
