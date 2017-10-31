@@ -4,6 +4,10 @@
 (*Tests*)
 
 
+(* ::Text:: *)
+(*Testing a test framework in itself sounds circular, because it is, so we have to be careful to build it up in steps. *)
+
+
 (* ::Subsection::Closed:: *)
 (*Head*)
 
@@ -91,59 +95,49 @@ AddTest["testAssertEqualsUnevaluated",
 
 
 AddTest["testAssertMatchSuccess",
-  If[Not[Catch[AssertMatch[{{_String, {_String | _Integer, _List}}, _String | _Integer}, 
-           {{"a", {"b", {}}}, 1}], "AssertMatch"] === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed nested List"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    {{_String, {_String | _Integer, _List}}, _String | _Integer}, 
+    {{"a", {"b", {}}}, 1}], "AssertMatch"]];
   (* Using positive examples from MatchQ documentation *)
-  If[Not[Catch[AssertMatch[_Integer, 12345], "AssertMatch"] === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed Integer"]];
-  If[Not[Catch[AssertMatch[Plus[_, __], Expand[x(1 + 2 x + 3 x^2)]], "AssertMatch"] === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed expanded polynomial"]];
-  If[Not[Catch[AssertMatch[0, Simplify[1 + 1/GoldenRatio - GoldenRatio]], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed simplified to 0"]];
-  If[Not[Catch[AssertMatch[_Association, <|a->1, b->2|>], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed Association"]];
-  If[Not[Catch[AssertMatch[<|a->_|>, <|a->1|>], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed Association 2"]];
-  If[Not[Catch[AssertMatch[<|_->1|>, <|a->1|>], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed Association 3"]];
-  If[Not[Catch[AssertMatch[<|a->x_/;StringQ[x]|>, <|a->"foo"|>], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed Association 4"]];
-  If[Not[Catch[AssertMatch[<|a->Verbatim[_]|>, <|a->_|>], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed Association 5"]];
-  If[Not[Catch[AssertMatch[<|_-><|_|>|>, <|1-><|2->x|>|>], "AssertMatch"] 
-      === Null], 
-     throwSomething["AssertMatch", "testAssertMatch failed nested Association"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    _Integer, 12345], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    Plus[_, __], Expand[x(1 + 2 x + 3 x^2)]], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    0, Simplify[1 + 1/GoldenRatio - GoldenRatio]], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    _Association, <|a->1, b->2|>], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    <|a->_|>, <|a->1|>], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    <|_->1|>, <|a->1|>], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    <|a->x_/;StringQ[x]|>, <|a->"foo"|>], "AssertMatch"]];
+  AssertEquals[Null, Catch[AssertMatch[
+    <|a->Verbatim[_]|>, <|a->_|>], "AssertMatch"]];
  ];
 
 AddTest["testAssertMatchFailed", Module[{result},
-  If[Not[Catch[AssertMatch[_Symbol, 1], "AssertMatch"] === 
-      eMUnit`Private`assertException[HoldComplete[AssertMatch[_Symbol, 1]], 1]], 
-    throwSomething["AssertMatch", "testAssertMatch failed, symbol matched 1"]];
+  AssertEquals[
+      eMUnit`Private`assertException[HoldComplete[AssertMatch[_Symbol, 1]], 1],
+      Catch[AssertMatch[_Symbol, 1], "AssertMatch"]];
   (* Using negative examples from MatchQ documentation *)
-  If[Not[Catch[AssertMatch[Plus[_, __], (x-1)(1 + 2 x + 3 x^2)], "AssertMatch"] === 
-       eMUnit`Private`assertException[
-         HoldComplete[AssertMatch[_+__, (x-1)(1+2 x+3 x^2)]], (-1+x)(1+2 x+3 x^2)]], 
-     throwSomething["AssertMatch", "testAssertMatch failed, plus matched polynomial"]];
-  If[Not[Catch[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio], "AssertMatch"] 
-       === 
-       eMUnit`Private`assertException[
-         HoldComplete[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio]], 1 + 1/GoldenRatio - GoldenRatio]], 
-     throwSomething["AssertMatch", "testAssertMatch failed, 0 matched implicit 0"]];
+  AssertEquals[
+      eMUnit`Private`assertException[
+        HoldComplete[AssertMatch[_+__, (x-1)(1+2 x+3 x^2)]], (-1+x)(1+2 x+3 x^2)],
+      Catch[AssertMatch[Plus[_, __], (x-1)(1 + 2 x + 3 x^2)], "AssertMatch"]];
+  AssertEquals[
+      eMUnit`Private`assertException[
+        HoldComplete[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio]], 1 + 1/GoldenRatio - GoldenRatio],
+      Catch[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio], "AssertMatch"]];
  ]];
 
 AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
   result = Catch[AssertMatch[0, ++i], "AssertMatch"];
   AssertEquals[1, i];
-  If[Not[result === 
-         eMUnit`Private`assertException[HoldComplete[AssertMatch[0, ++i]], 1]],
-     throwSomething["AssertMatch", "testAssertMatchFailedEvaluatesOnce failed"]];
+  AssertEquals[
+    eMUnit`Private`assertException[HoldComplete[AssertMatch[0, ++i]], 1],
+    result];
   AssertEquals[1, i];
 ]];
 
