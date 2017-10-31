@@ -4,15 +4,78 @@
 (*Tests*)
 
 
+(* ::Subsection::Closed:: *)
+(*Tests not using framework or incrementally using parts that are tested*)
+
+
 (* ::Text:: *)
-(*Testing a test framework in itself sounds circular, because it is, so we have to be careful to build it up in steps. *)
+(*Testing a test framework in itself sounds circular, because it is. We have to be careful to build it up in steps, starting with testing the basic functionality with regular Ifs and Throws.*)
+
+
+nonFrameworkTests = {};
+
+
+(* ::Subsubsection::Closed:: *)
+(*Test AssertEquals*)
+
+
+(* Used to test AssertEquals, can't use it to test itself *)
+(* Only works when run from complete package due to explicit mention of context eMUnit`Private` *)
+throwSomething[text_] := 
+  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
+
+
+(* testThrowSomething *) AppendTo[nonFrameworkTests, Hold[
+Module[{result},
+ result = Catch[throwSomething["testThrowSomething throw"], 
+   "AssertEquals"];
+ If[Not[result === 
+        eMUnit`Private`assertException[HoldComplete["testThrowSomething throw"], ""]], 
+  {Print@#, Throw@#} &["!!! testThrowSomething failed, gave " <> ToString@result <> 
+    "\n Cannot trust tests of AssertEquals."]];
+]]];
+
+
+(* testAssertEqualsSuccess *) AppendTo[nonFrameworkTests, Hold[
+If[Not[Catch[AssertEquals[1, 1], "AssertEquals"] === Null], 
+ throwSomething["testAssertEqualsSuccess failed"]]
+]];
+
+(* testAssertEqualsThrow *) AppendTo[nonFrameworkTests, Hold[
+With[{i = 2},
+ If[Catch[AssertEquals[1, i], "AssertEquals"] === 
+     eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
+   Null,
+   throwSomething["testAssertEqualsThrow failed"]]
+]]];
+
+(* testAssertEqualsUnevaluated *) AppendTo[nonFrameworkTests, Hold[
+Module[{result, f, i = 0},
+ f[a_] /; (i += a; False) := Throw["This shouldn't evaluate"];
+ result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
+ AssertEquals[Unevaluated@eMUnit`Private`assertException[
+     HoldComplete[AssertEquals[f[2], f[3]]], 
+     f[3]]
+  , result];
+ AssertEquals[3, i];
+]]];
 
 
 (* ::Subsection::Closed:: *)
-(*Head*)
+(*Start of framework*)
 
 
-TestEMUnitPackage[] := RunTest[frameworkTests]
+(* Start with running non-framework tests, if any fail uncaught throws end execution.
+   Otherwise report 0 failed non-framework tests. *)
+TestEMUnitPackage[] := With[{string = 
+ "Running non-framework tests\n" <>
+ (ReleaseHold /@ nonFrameworkTests; ToString@Length@nonFrameworkTests) <> 
+ " run, 0 failed\n" <>
+ "Running framework tests\n"},
+ (* Prepend string to the regular summary given by RunTest without interfering with 
+    the rest of its reporting. *)
+ MapAt[string <> # &, RunTest[frameworkTests], {1, 2}]
+]
 
 
 ClearAll[frameworkTests];
@@ -29,61 +92,7 @@ AddTest["Tear Down",
 
 
 (* ::Subsection:: *)
-(*Shared functions*)
-
-
-(* Used to test AssertEquals, can't use them to test themselves *)
-(* Only works when run from complete package due to explicit mention of context eMUnit`Private` *)
-throwSomething[text_] := 
-  eMUnit`Private`throwAssertException["AssertEquals", text, ""]
-
-
-(* ::Subsubsection:: *)
-(*Test shared functions*)
-
-
-With[{warningStringPart1 = "!!! testThrowSomething failed, gave ",
- warningStringPart2 ="\n Cannot trust tests of AssertEquals."},
-Module[{result},
- result = Catch[throwSomething["testThrowSomething throw"], 
-   "AssertEquals"];
- If[Not[result === 
-        eMUnit`Private`assertException[HoldComplete["testThrowSomething throw"], ""]], 
-  {Print@#, Throw@#} &[warningStringPart1 <> ToString@result <> warningStringPart2]];
-]];
-
-
-(* ::Subsection:: *)
 (*Test Asserts*)
-
-
-(* ::Subsubsection:: *)
-(*Test AssertEquals*)
-
-
-AddTest["testAssertEqualsSuccess",
- If[Not[Catch[AssertEquals[1, 1], "AssertEquals"] === Null], 
-   throwSomething["testAssertEqualsSuccess failed"]]
-];
-
-AddTest["testAssertEqualsThrow", 
- With[{i = 2},
-  If[Catch[AssertEquals[1, i], "AssertEquals"] === 
-      eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
-     Null,
-     throwSomething["testAssertEqualsThrow failed"]]
- ]];
-
-AddTest["testAssertEqualsUnevaluated",
- Module[{result, f, i = 0},
-  f[a_] /; (i += a; False) := Throw["This shouldn't evaluate"];
-  result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
-  AssertEquals[Unevaluated@eMUnit`Private`assertException[
-      HoldComplete[AssertEquals[f[2], f[3]]], 
-      f[3]]
-   , result];
-  AssertEquals[3, i];
- ]];
 
 
 (* ::Subsubsection::Closed:: *)
