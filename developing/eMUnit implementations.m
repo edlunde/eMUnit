@@ -4,7 +4,7 @@
 (*Implementations*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Asserts*)
 
 
@@ -61,10 +61,10 @@ With[{defaultTolerance = 0.001},
     throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
      evaluated]]];
 
-AppendTo[assertExceptionNames, "AssertMemberN"];
-SetAttributes[AssertMemberN, HoldRest];
-Options[AssertMemberN] = {Tolerance -> defaultTolerance};
-AssertMemberN[candidates_List, expr_, OptionsPattern[]] := 
+AppendTo[assertExceptionNames, "AssertMatchN"];
+SetAttributes[AssertMatchN, HoldRest];
+Options[AssertMatchN] = {Tolerance -> defaultTolerance};
+AssertMatchN[candidates_List, expr_, OptionsPattern[]] := 
  With[{evaluated = expr,
   tol = If[NumericQ@OptionValue[Tolerance],
      OptionValue[Tolerance],
@@ -72,7 +72,7 @@ AssertMemberN[candidates_List, expr_, OptionsPattern[]] :=
       defaultTolerance)]}, (* Falling back on default tolerance and sending warning *)
  If[memberQN[candidates, evaluated, tol],
   Null, 
-  throwAssertException["AssertMemberN", AssertMemberN[candidates, expr, Tolerance -> tol],
+  throwAssertException["AssertMatchN", AssertMatchN[candidates, expr, Tolerance -> tol],
    evaluated]]];
 
 ]

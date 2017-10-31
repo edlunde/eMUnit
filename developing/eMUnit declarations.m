@@ -13,16 +13,6 @@ evaluates to value. Otherwise it throws an AssertEquals-exception to be caught \
 by RunTest.";
 
 
-AssertEqualsN::usage = "AssertEquals[value, expression, Tolerance -> 0.001] returns \
-Null if expression evaluates numerically to within Tolerance of value. Otherwise it \
-throws an AssertEquals-exception to be caught by RunTest.";
-
-
-AssertMemberN::usage = "AssertMemberN[list, expression, Tolerance -> 0.001] returns \
-Null if expression is a member of list to within Tolerance. Otherwise it throws an \
-AssertMember-exception to be caught by RunTest.";
-
-
 AssertMatch::usage = "AssertMatch[form, expression] returns Null if expression \
 matches form. Otherwise it throws an AssertMatch-exception to be caught \
 by RunTest.";
@@ -31,6 +21,16 @@ by RunTest.";
 AssertTrue::usage = "AssertTrue[expression] returns Null if expression \
 evaluates to True. Otherwise it throws an AssertTrue-exception to be caught \
 by RunTest.";
+
+
+AssertEqualsN::usage = "AssertEquals[value, expression, Tolerance -> 0.001] returns \
+Null if expression evaluates numerically to within Tolerance of value. Otherwise it \
+throws an AssertEquals-exception to be caught by RunTest.";
+
+
+AssertMatchN::usage = "AssertMemberN[form, expression, Tolerance -> 0.001] returns \
+Null if expression matches form with numerical values matching within Tolerance. \
+Otherwise it throws an AssertMember-exception to be caught by RunTest.";
 
 
 AssertMessage::usage = "AssertMessage[message, expr] evaluates expr and checks if \
