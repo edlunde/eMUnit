@@ -4,8 +4,12 @@
 (*Implementations*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Asserts*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Common*)
 
 
 assertExceptionNames = {}; (* Added for each assert where defined *)
@@ -21,6 +25,10 @@ getAssertExceptionExprString[exception_assertException] :=
  replaceHoldWithToString@@getAssertExceptionExpr[exception]
 SetAttributes[replaceHoldWithToString, HoldAll]
 replaceHoldWithToString[expr_] := ToString[Unevaluated[expr], InputForm]
+
+
+(* ::Subsubsection::Closed:: *)
+(*AssertEquals, AssertMatch, AssertTrue*)
 
 
 AppendTo[assertExceptionNames, "AssertEquals"];
@@ -43,39 +51,45 @@ AssertTrue[expr_] := With[{evaluated = expr},
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
 
+(* ::Subsubsection::Closed:: *)
+(*AssertEqualsN, AssertMatchN*)
+
+
 With[{defaultTolerance = 0.001},
  eMUnitMessages::nonNumericTolerance = "Value of option Tolerance -> `1` is not numeric,\
  using default tolerance " <> ToString@defaultTolerance;
  
- AppendTo[assertExceptionNames, "AssertEqualsN"];
- SetAttributes[AssertEqualsN, HoldRest];
  Options[AssertEqualsN] = {Tolerance -> defaultTolerance};
- AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
-  With[
-   {evaluated = expr, 
-    tol = If[NumericQ@OptionValue[Tolerance],
-     OptionValue[Tolerance],
-     (Message[eMUnitMessages::nonNumericTolerance, OptionValue[Tolerance]]; 
-      defaultTolerance)]}, (* Falling back on default tolerance and sending warning *)
-   If[N@Abs[shouldBe - evaluated] <= tol, Null, 
-    throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
-     evaluated]]];
+ Options[AssertMatchN] = {Tolerance -> defaultTolerance};
+ 
+ getTolerance[tol_] := 
+   If[NumericQ@tol,
+     tol,
+     (Message[eMUnitMessages::nonNumericTolerance, tol]; 
+       defaultTolerance)(* Falling back on default tolerance and sending warning *)
+     ]; 
+]
+
+
+AppendTo[assertExceptionNames, "AssertEqualsN"];
+SetAttributes[AssertEqualsN, HoldRest];
+AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
+ With[
+  {evaluated = expr, tol = getTolerance@OptionValue[Tolerance]},
+  If[N@Abs[shouldBe - evaluated] <= tol, Null, 
+   throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
+    evaluated]]];
+
 
 AppendTo[assertExceptionNames, "AssertMatchN"];
 SetAttributes[AssertMatchN, HoldRest];
-Options[AssertMatchN] = {Tolerance -> defaultTolerance};
 AssertMatchN[candidates_List, expr_, OptionsPattern[]] := 
- With[{evaluated = expr,
-  tol = If[NumericQ@OptionValue[Tolerance],
-     OptionValue[Tolerance],
-     (Message[eMUnitMessages::nonNumericTolerance, OptionValue[Tolerance]]; 
-      defaultTolerance)]}, (* Falling back on default tolerance and sending warning *)
+ With[{evaluated = expr, tol = getTolerance@OptionValue[Tolerance]}, 
  If[memberQN[candidates, evaluated, tol],
   Null, 
   throwAssertException["AssertMatchN", AssertMatchN[candidates, expr, Tolerance -> tol],
    evaluated]]];
 
-]
 
 memberQN[candidates_List, evaluated_, tol_] :=
  Or@@(matchQN[#, evaluated, tol] & /@ candidates)
@@ -97,6 +111,10 @@ numericalLeavesMatchToToleranceQ[candidate_, evaluated_, tol_] :=
  And@@( 
   (Abs[Extract[candidate, #] - Extract[evaluated, #]] <= tol) & /@  
     Position[candidate, _?NumericQ])
+
+
+(* ::Subsubsection::Closed:: *)
+(*AssertMessage*)
 
 
 AppendTo[assertExceptionNames, "AssertMessage"];
@@ -127,8 +145,12 @@ passOnMessages[uncaughtMessages_] :=
   (Unprotect[$MessageList]; $MessageList = uncaughtMessages; Protect[$MessageList];)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Begin, List, Add, Delete*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*BeginSuite*)
 
 
 BeginSuite[suite_Symbol] := (If[!ListQ[suiteStack], suiteStack = {}]; 
@@ -143,8 +165,16 @@ currentSuiteSetQ[] := If[Length[suiteStack] > 0, True,
 eMUnitMessages::suiteNotSet = "No suite set with BeginSuite[].";
 
 
+(* ::Subsubsection::Closed:: *)
+(*ListTests*)
+
+
 ListTests[] := runIfSuiteSet[ListTests[currentSuite[]]]
 ListTests[suite_Symbol] := suite[UnitTests]
+
+
+(* ::Subsubsection::Closed:: *)
+(*AddTest, DeleteTest*)
 
 
 SetAttributes[AddTest, HoldRest];
@@ -162,18 +192,22 @@ shouldBeAdded[suite_Symbol, name_] :=
  Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
 
 
+DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
+DeleteTest[suite_Symbol, name_] := (suite[name] =.; 
+  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];
+  name)
+
+
+(* ::Subsubsection::Closed:: *)
+(*AddSuite, BeginSubsuite*)
+
+
 AddSuite[subsuite_Symbol] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
 AddSuite[mainSuite_Symbol, subsuite_Symbol] := 
    AddTest[mainSuite, subsuite, runTest[subsuite]]
 
 BeginSubsuite[subsuite_Symbol] := 
   runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
-
-
-DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
-DeleteTest[suite_Symbol, name_] := (suite[name] =.; 
-  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];
-  name)
 
 
 (* ::Subsection::Closed:: *)
