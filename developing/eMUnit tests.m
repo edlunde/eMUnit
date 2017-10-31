@@ -4,15 +4,6 @@
 (*Tests*)
 
 
-(* ::Subsubsection::Closed:: *)
-(*Helper functions*)
-
-
-(* Used to test AssertEquals and AssertMatch, can't use them to test themselves *)
-throwSomething[text_] := 
-  eMUnit`Private`throwAssertException["AssertEquals or AssertMatch", text, ""]
-
-
 (* ::Subsection::Closed:: *)
 (*Head*)
 
@@ -33,6 +24,35 @@ AddTest["Tear Down",
  ClearAll[mytests, anotherSuite]];
 
 
+(* ::Subsection::Closed:: *)
+(*Shared functions*)
+
+
+(* Used to test AssertEquals and AssertMatch, can't use them to test themselves *)
+(* Only works when run from complete package due to explicit mention of context eMUnit`Private` *)
+throwSomething[name_?eMUnit`Private`isAssertExceptionName, text_] := 
+  eMUnit`Private`throwAssertException[name, text, ""]
+
+
+(* ::Subsubsection::Closed:: *)
+(*Test shared functions*)
+
+
+With[{warningStringPart1 = "!!! testThrowSomething failed, gave ",
+ warningStringPart2 ="\n Cannot trust tests of AssertEquals and AssertMatch"},
+Module[{result},
+ result = Catch[throwSomething["AssertEquals", "first testThrowSomething throw"], 
+   "AssertEquals"];
+ If[Not[result === eMUnit`Private`assertException[HoldComplete["first testThrowSomething throw"], ""]], 
+  {Print@#, Throw@#} &[warningStringPart1 <> ToString@result <> warningStringPart2]];
+  
+ result = Catch[throwSomething["AssertMatch", "second testThrowSomething throw"], 
+   "AssertMatch"];
+ If[Not[result === eMUnit`Private`assertException[HoldComplete["second testThrowSomething throw"], ""]], 
+  {Print@#, Throw@#} &[warningStringPart1 <> ToString@result <> warningStringPart2]];
+ ]];
+
+
 (* ::Subsection:: *)
 (*Test Asserts*)
 
@@ -42,18 +62,16 @@ AddTest["Tear Down",
 
 
 AddTest["testAssertEqualsSuccess",
- Module[{result},
-  result = Catch[AssertEquals[1, 1], "AssertEquals"] === Null;
-  If[Not@result, throwSomething["testAssertEqualsSuccess failed"]]
- ]];
+ If[Not[Catch[AssertEquals[1, 1], "AssertEquals"] === Null], 
+   throwSomething["AssertEquals", "testAssertEqualsSuccess failed"]]
+];
 
 AddTest["testAssertEqualsThrow", 
- Module[{i, result},
-  i := 2;
-  result = Catch[AssertEquals[1, i], "AssertEquals"];
-  If[result === eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
+ With[{i = 2},
+  If[Catch[AssertEquals[1, i], "AssertEquals"] === 
+      eMUnit`Private`assertException[HoldComplete[AssertEquals[1, i]], 2], 
      Null,
-     throwSomething["testAssertEqualsThrow failed"]]
+     throwSomething["AssertEquals", "testAssertEqualsThrow failed"]]
  ]];
 
 AddTest["testAssertEqualsUnevaluated",
@@ -73,15 +91,51 @@ AddTest["testAssertEqualsUnevaluated",
 
 
 AddTest["testAssertMatchSuccess",
-  If[Not[Catch[AssertMatch[_?NumericQ, 1], "AssertMatch"] === Null], 
-     throwSomething["testAssertMatch failed"]]
+  If[Not[Catch[AssertMatch[{{_String, {_String | _Integer, _List}}, _String | _Integer}, 
+           {{"a", {"b", {}}}, 1}], "AssertMatch"] === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed nested List"]];
+  (* Using positive examples from MatchQ documentation *)
+  If[Not[Catch[AssertMatch[_Integer, 12345], "AssertMatch"] === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed Integer"]];
+  If[Not[Catch[AssertMatch[Plus[_, __], Expand[x(1 + 2 x + 3 x^2)]], "AssertMatch"] === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed expanded polynomial"]];
+  If[Not[Catch[AssertMatch[0, Simplify[1 + 1/GoldenRatio - GoldenRatio]], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed simplified to 0"]];
+  If[Not[Catch[AssertMatch[_Association, <|a->1, b->2|>], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed Association"]];
+  If[Not[Catch[AssertMatch[<|a->_|>, <|a->1|>], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed Association 2"]];
+  If[Not[Catch[AssertMatch[<|_->1|>, <|a->1|>], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed Association 3"]];
+  If[Not[Catch[AssertMatch[<|a->x_/;StringQ[x]|>, <|a->"foo"|>], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed Association 4"]];
+  If[Not[Catch[AssertMatch[<|a->Verbatim[_]|>, <|a->_|>], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed Association 5"]];
+  If[Not[Catch[AssertMatch[<|_-><|_|>|>, <|1-><|2->x|>|>], "AssertMatch"] 
+      === Null], 
+     throwSomething["AssertMatch", "testAssertMatch failed nested Association"]];
  ];
 
 AddTest["testAssertMatchFailed", Module[{result},
-  result = Catch[AssertMatch[_Symbol, 1], "AssertMatch"];
-  If[Not[result === 
-       eMUnit`Private`assertException[HoldComplete[AssertMatch[_Symbol, 1]], 1]], 
-     throwSomething["testAssertMatch failed"]]
+  If[Not[Catch[AssertMatch[_Symbol, 1], "AssertMatch"] === 
+      eMUnit`Private`assertException[HoldComplete[AssertMatch[_Symbol, 1]], 1]], 
+    throwSomething["AssertMatch", "testAssertMatch failed, symbol matched 1"]];
+  (* Using negative examples from MatchQ documentation *)
+  If[Not[Catch[AssertMatch[Plus[_, __], (x-1)(1 + 2 x + 3 x^2)], "AssertMatch"] === 
+       eMUnit`Private`assertException[
+         HoldComplete[AssertMatch[_+__, (x-1)(1+2 x+3 x^2)]], (-1+x)(1+2 x+3 x^2)]], 
+     throwSomething["AssertMatch", "testAssertMatch failed, plus matched polynomial"]];
+  If[Not[Catch[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio], "AssertMatch"] 
+       === 
+       eMUnit`Private`assertException[
+         HoldComplete[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio]], 1 + 1/GoldenRatio - GoldenRatio]], 
+     throwSomething["AssertMatch", "testAssertMatch failed, 0 matched implicit 0"]];
  ]];
 
 AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
@@ -89,7 +143,7 @@ AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
   AssertEquals[1, i];
   If[Not[result === 
          eMUnit`Private`assertException[HoldComplete[AssertMatch[0, ++i]], 1]],
-     throwSomething["testAssertMatchFailedEvaluatesOnce failed"]];
+     throwSomething["AssertMatch", "testAssertMatchFailedEvaluatesOnce failed"]];
   AssertEquals[1, i];
 ]];
 
@@ -155,7 +209,7 @@ AddTest["testAssertEqualsNThrow",
  ]];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Test AssertMatchN*)
 
 

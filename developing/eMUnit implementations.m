@@ -4,12 +4,12 @@
 (*Implementations*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Asserts*)
 
 
 assertExceptionNames = {}; (* Added for each assert where defined *)
-isAssertExceptionName[name_String] := MemberQ[assertExceptionNames, name]
+isAssertExceptionName[name_] := StringQ@name && MemberQ[assertExceptionNames, name]
 
 SetAttributes[throwAssertException, HoldRest];
 throwAssertException[name_?isAssertExceptionName, callExpression_, result_] := 
