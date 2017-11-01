@@ -83,34 +83,50 @@ AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] :=
 
 AppendTo[assertExceptionNames, "AssertMatchN"];
 SetAttributes[AssertMatchN, HoldRest];
-AssertMatchN[candidates_List, expr_, OptionsPattern[]] := 
+AssertMatchN[form_, expr_, OptionsPattern[]] := 
  With[{evaluated = expr, tol = getTolerance@OptionValue[Tolerance]}, 
- If[memberQN[candidates, evaluated, tol],
+ If[matchQN[evaluated, form, tol],
   Null, 
-  throwAssertException["AssertMatchN", AssertMatchN[candidates, expr, Tolerance -> tol],
+  throwAssertException["AssertMatchN", AssertMatchN[form, expr, Tolerance -> tol],
    evaluated]]];
 
 
-memberQN[candidates_List, evaluated_, tol_] :=
- Or@@(matchQN[#, evaluated, tol] & /@ candidates)
-
 ClearAll@matchQN
-matchQN[candidate_?NumericQ, evaluated_?NumericQ, tol_] :=
- Abs[candidate - evaluated ] <= tol
-matchQN[candidate_, evaluated_, tol_] /; AtomQ@candidate || AtomQ@evaluated := 
- candidate === evaluated
-matchQN[candidate_, evaluated_, tol_] := 
- nonNumericStructureMatches[candidate, evaluated] &&
-  numericalLeavesMatchToToleranceQ[candidate, evaluated, tol]
- 
-nonNumericStructureMatches[candidate_, evaluated_] := 
- MatchQ[evaluated, replaceNumericalWithBlank[candidate]]
-replaceNumericalWithBlank[expr_] := expr /. _?NumericQ -> Blank[]
+matchQN[expr_, form_, tol_] /; MatchQ[expr, form] := True
+matchQN[expr_?NumericQ, form_?NumericQ, tol_] :=
+ Abs[expr - form] <= tol
+(*matchQN[expr_, form_, tol_] /; AtomQ@expr || AtomQ@expr := 
+ MatchQ[expr, form]*)
+matchQN[exprIn_, formIn_, tol_] := 
+ With[{expr = handleAssociations[exprIn], form = handleAssociations[formIn]},
+  nonNumericalStructureMatchesQ[expr, form] &&
+   numericalLeavesMatchToToleranceQ[expr, form, tol]]
 
-numericalLeavesMatchToToleranceQ[candidate_, evaluated_, tol_] :=
- And@@( 
-  (Abs[Extract[candidate, #] - Extract[evaluated, #]] <= tol) & /@  
-    Position[candidate, _?NumericQ])
+(* Associations behave as atoms in replacements so we need to change them to
+   some head with more standard behavior. Chose association over List or similar
+   to hopefully make stack traces easier to read. *)
+handleAssociations[expr_] := 
+ expr /. Association -> association
+  
+nonNumericalStructureMatchesQ[expr_, form_] :=
+ MatchQ[expr, replaceNumericsWithNumericQPatterns[form]]
+replaceNumericsWithNumericQPatterns[form_] := form /.  _?NumericQ -> _?NumericQ
+
+numericalLeavesMatchToToleranceQ[expr_, form_, tol_] := 
+ And @@ (
+  matchQN[Extract[form, #], extractLeafAtPositionInForm[expr, form, #], tol] & /@
+   positionsOfNumericalLeaves[form])
+
+Module[{x},
+extractLeafAtPositionInForm[expr_, form_, position_]:=
+ First@Cases[expr,
+   replacePositionInFormWithLabeledNumericQPattern[form, position] :> x, 
+   All];
+replacePositionInFormWithLabeledNumericQPattern[form_, position_] :=
+ replaceNumericsWithNumericQPatterns[ReplacePart[form, position -> x_?NumericQ]];
+]
+
+positionsOfNumericalLeaves[form_] := Position[form, _?NumericQ]
 
 
 (* ::Subsubsection::Closed:: *)

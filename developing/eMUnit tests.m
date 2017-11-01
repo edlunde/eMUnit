@@ -4,7 +4,7 @@
 (*Tests*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Tests not using framework or incrementally using parts that are tested*)
 
 
@@ -207,37 +207,96 @@ AddTest["testAssertEqualsNThrow",
 (*Test AssertMatchN*)
 
 
+With[{matchQN = eMUnit`Private`matchQN},
+AddTest["testMatchQNExact", With[{tol = 0},
+ AssertTrue[matchQN[
+   {{"a", {"b", {}}}, 1},
+   {{_String, {_String | _Integer, _List}}, _String | _Integer}, tol]];
+ AssertTrue[matchQN[
+   {{"a", {"b", {1, {2}}}}, 1}, 
+   {{_String, {_String | _Integer, _}}, _String | _Integer}, tol]];
+ AssertTrue[matchQN[
+   f[a, g[0.1, {a, {1, 2}}], g], _[a, g[__], _], tol]];
+  (* Using examples from MatchQ documentation *)
+ AssertTrue[matchQN[12345, _Integer, tol]];
+ AssertTrue[Not@matchQN[x(1 + 2 x + 3 x^2), Plus[_, __], tol]];
+ AssertTrue[matchQN[Expand[x(1 + 2 x + 3 x^2)], Plus[_, __], tol]];
+    (* Not doing the "not explicitly 0" test as they are of course equal within even tol = 0. *)
+ AssertTrue[matchQN[<|a->1, b->2|>, _Association, tol]];
+ AssertTrue[matchQN[<|a->1|>, <|a->_|>, tol]];
+ AssertTrue[matchQN[<|a->1|>, <|_->1|>, tol]];
+ AssertTrue[matchQN[<|a->"foo"|>, <|a->x_/;StringQ[x]|>, tol]];
+ AssertTrue[matchQN[<|a->_|>, <|a->Verbatim[_]|>, tol]];
+]];
+
+AddTest["testMatchQN", With[{tol = 0.2},
+ (* Start simple, one approximate numerical match to make sure the terms don't MatchQ exactly *)
+ AssertTrue[matchQN[{"a", 1.1}, {_String, 1}, tol]];
+ AssertTrue[matchQN[{1, 1.1}, {_Integer, 1}, tol]];
+ AssertTrue[matchQN[{1, 1.1}, {_Integer | _String, 1}, tol]];
+ AssertTrue[matchQN[{"a", "b", 1.1}, {__, 1}, tol]];
+ Quiet@AssertNoMessage[matchQN[{1.1}, {___, 1}, tol]];
+ AssertTrue[matchQN[{1.1}, {___, 1}, tol]];
+ AssertTrue[matchQN[{1, 0}, {___, 5.1, ___}, 4.5]];
+ (* Using examples from MatchQ documentation *)
+ AssertTrue[Not@matchQN[x(1 + 2 x + 3 x^2), Plus[_, _[2.1, _], __], tol]];
+ AssertTrue[matchQN[Expand[x(1 + 2 x + 3 x^2)], Plus[_, _[2.1, _], __], tol]];
+ AssertTrue[matchQN[<|a -> 1|>, <|_ -> 1.1|>, tol]];
+ AssertTrue[matchQN[<|1 -> "foo"|>, <|1.1 -> x_/;StringQ[x]|>, tol]];
+ AssertTrue[matchQN[<|1 -> _|>, <|1.1 -> Verbatim[_]|>, tol]];
+ AssertTrue[Not@matchQN[<|a -> 1|>, <|_ -> 1.1+tol|>, tol]];
+ AssertTrue[Not@matchQN[<|1 -> "foo"|>, <|1.1+tol -> x_/;StringQ[x]|>, tol]];
+ AssertTrue[Not@matchQN[<|1 -> _|>, <|1.1+tol -> Verbatim[_]|>, tol]];
+ (* Some longer ones *)
+ AssertTrue[matchQN[
+   {{"a", {"b", {}}}, 1},
+   {{_String, {_String | _Integer, _List}}, 1.1}, tol]];
+ AssertTrue[matchQN[
+   {{"a", {"b", {1, {2}}}}, 1}, 
+   {{_String, {_String | _Integer, {__, {2.1}}}}, _String | _Integer}, tol]];
+ AssertTrue[matchQN[
+   f[a, g[0.1, {a, {1, 2}}], g], _[a, g[__, {_, {1.1, 1.9}}], _], tol]];
+ AssertTrue[matchQN[
+   <|1 -> a, 2 -> g[0.1, {<|1 -> _|>, {1, 2}}], 3 -> g|>, 
+   _[0.9 -> _, _ -> g[__, {<|1.1 -> Verbatim[_]|>, {1.1, 1.9}}], _], tol]];
+]];
+]
+
+
 AddTest["testAssertMatchNSuccessExact",
- AssertEquals[Null, Catch[AssertMatchN[{1, 2, 3}, 1], "AssertMatchN"]];
- AssertEquals[Null, Catch[AssertMatchN[{{1, 2}, {3, 4}, 3}, {1, 2}], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+    {{_String, {_String | _Integer, _List}}, _String | _Integer}, 
+    {{"a", {"b", {}}}, 1}], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+    {{_String, {_String | _Integer, _}}, _String | _Integer}, 
+    {{"a", {"b", {1, {2}}}}, 1}], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+    _[a, g[__], _], 
+    f[a, g[0.1, {a, {1, 2}}], g]], "AssertMatchN"]];
 ];
 
-AddTest["testAssertMatchNSuccessDefaultTolerance",
-AssertEquals[Null, Catch[
-   AssertMatchN[{1, 2, 3}, 1 + 0.1*Tolerance /. Options[AssertMatchN]], "AssertMatchN"]]
-];
+AddTest["testAssertMatchNSuccessDefaultTolerance", 
+With[{tol = Tolerance /. Options[AssertMatchN]},
+ AssertEquals[Null, Catch[AssertMatchN[
+   1, 1 + 0.1*tol], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+   <|1 -> a, 2 -> g[0.1, {<|1 -> _|>, {1, 2}}], 3 -> g|>, 
+   <|1 -> a, 2 -> g[0.1, {<|1 -> _|>, {1, 2}}], 3 -> g|>], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+    <|_ -> 1|>, <|a -> 1 + 0.1*tol|>], "AssertMatchN"]];
+]];
 
 AddTest["testAssertMatchNSuccessOnExactTolerance",
- AssertEquals[Null, Catch[AssertMatchN[{1, 3}, 2, Tolerance -> 1], "AssertMatchN"]];
- AssertEquals[Null, Catch[AssertMatchN[{{1}, {3}}, {2}, Tolerance -> 1], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[1, 2, Tolerance -> 1], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+   {{2}, _}, {{1}, {3}}, Tolerance -> 1], "AssertMatchN"]];
 ];
 
 AddTest["testAssertMatchNSuccessLargeTolerance",
- AssertEquals[Null, 
-  Catch[AssertMatchN[{1, 0}, 5.1, Tolerance -> 4.5], "AssertMatchN"]];
- AssertEquals[Null, 
-   Catch[AssertMatchN[{{1}, {0}}, {5.1}, Tolerance -> 4.5], "AssertMatchN"]];
-];
-
-AddTest["testAssertMemberNSuccessMixedArguments",
- AssertEquals[Null, 
-  Catch[AssertMatchN[{1, "a"}, 5.1, Tolerance -> 4.5], "AssertMatchN"]];
- AssertEquals[Null, 
-   Catch[AssertMatchN[{{0, "a"}, {1}}, {5.1}, Tolerance -> 4.5], "AssertMatchN"]];
- AssertEquals[Null, 
-  Catch[AssertMatchN[{{1, "a"}, 2, 3}, {1, "a"}], "AssertMatchN"]];
- AssertEquals[Null, 
-  Catch[AssertMatchN[{{2}, {1, "a"}, 3}, {1, "a"}], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+   {5.1, _}, {1, 0}, Tolerance -> 4.5], "AssertMatchN"]];
+ AssertEquals[Null, Catch[AssertMatchN[
+   {___, {5.1}, ___}, {{1}, {0}}, Tolerance -> 4.5], "AssertMatchN"]];
 ];
 
 AddTest["testAssertMatchNNonNumericTolerance",
