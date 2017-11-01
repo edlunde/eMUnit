@@ -31,8 +31,8 @@ Module[{result},
    "AssertEquals"];
  If[Not[result === 
         eMUnit`Private`assertException[HoldComplete["testThrowSomething throw"], ""]], 
-  {Print@#, Throw@#} &["!!! testThrowSomething failed, gave " <> ToString@result <> 
-    "\n Cannot trust tests of AssertEquals."]];
+  Throw["!!! testThrowSomething failed, gave " <> ToString@result <> 
+    "\nCannot trust tests of AssertEquals.", "throwSomethingFailed"]];
 ]]];
 
 
@@ -53,11 +53,12 @@ With[{i = 2},
 Module[{result, f, i = 0},
  f[a_] /; (i += a; False) := Throw["This shouldn't evaluate"];
  result = Catch[AssertEquals[Unevaluated@f[2], f[3]], "AssertEquals"];
- AssertEquals[Unevaluated@eMUnit`Private`assertException[
+ If[result === Unevaluated@eMUnit`Private`assertException[
      HoldComplete[AssertEquals[f[2], f[3]]], 
-     f[3]]
-  , result];
- AssertEquals[3, i];
+     f[3]], 
+    Null, 
+    throwSomething["testAssertEqualsUnevaluated failed, result is not the expected exception"]];
+ If[3 != i, throwSomething["testAssertEqualsUnevaluated failed, i != 3"]];
 ]]];
 
 
@@ -65,17 +66,16 @@ Module[{result, f, i = 0},
 (*Start of framework*)
 
 
-(* Start with running non-framework tests, if any fail uncaught throws end execution.
-   Otherwise report 0 failed non-framework tests. *)
+(* Start with running non-framework tests, if any fail an uncaught throw ends execution.
+   Otherwise report 0 failed non-framework tests and continue with framework tests. *)
 TestEMUnitPackage[] := With[{string = 
  "Running non-framework tests\n" <>
  (ReleaseHold /@ nonFrameworkTests; ToString@Length@nonFrameworkTests) <> 
- " run, 0 failed\n" <>
+ " run, 0 failed\n" <>  
  "Running framework tests\n"},
  (* Prepend string to the regular summary given by RunTest without interfering with 
     the rest of its reporting. *)
- MapAt[string <> # &, RunTest[frameworkTests], {1, 2}]
-]
+ MapAt[string <> # &, RunTest[frameworkTests], {1, 2}]]
 
 
 ClearAll[frameworkTests];

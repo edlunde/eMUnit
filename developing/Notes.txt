@@ -1,6 +1,5 @@
 --- ToDo ---
 
-testAssertEqualsUnevaluated should not use AssertEquals but throwSomething
 verbose - report timing for each test and suite
 Check errors in AddTest is caught by our testing
 
@@ -8,6 +7,8 @@ Refactor tests so they are not dependent on all the eMUnit`Private` I have now.
 -> do replace in makeScript to add them?
  Maybe wrapper function that checks for a symbols context and adds it? Check tutorial/ManipulatingSymbolsAndContextsByName
  Maybe change the way I test them
+
+Look into Check, could use to simplify AssertMessage?
 
 --- Maybe ---
 
