@@ -230,21 +230,24 @@ AddTest["testMatchQNExact", With[{tol = 0},
 ]];
 
 AddTest["testMatchQN", With[{tol = 0.2},
+ AssertTrue[tol < 1]; (* Assumption used in tests below *)
  (* Start simple, one approximate numerical match to make sure the terms don't MatchQ exactly *)
  AssertTrue[matchQN[0., 0, tol]];
  AssertTrue[matchQN[0, 0., tol]];
  AssertTrue[matchQN[0, 0. | 1., tol]];
  AssertTrue[matchQN[0, 1. | 0., tol]];
- AssertTrue[matchQN[{"a", 1.1}, {_String, 1}, tol]];
- AssertTrue[matchQN[{1, 1.1}, {_Integer, 1}, tol]];
- AssertTrue[matchQN[{1, 1.1}, {_Integer | _String, 1}, tol]];
- AssertTrue[matchQN[{"a", "b", 1.1}, {__, 1}, tol]];
- Quiet@AssertNoMessage[matchQN[{1.1}, {___, 1}, tol]];
- AssertTrue[matchQN[{1.1}, {___, 1}, tol]];
+ AssertTrue[matchQN[{0}, {1.} | {0.}, tol]];
+ AssertTrue[matchQN[{"a", 1 + tol/2}, {_String, 1}, tol]];
+ AssertTrue[matchQN[{1, 1 + tol/2}, {_Integer, 1}, tol]];
+ AssertTrue[matchQN[{1, 1 + tol/2}, {_Integer | _String, 1}, tol]];
+ AssertTrue[matchQN[{"a", "b", 1 + tol/2}, {__, 1}, tol]];
+ Quiet@AssertNoMessage[matchQN[{1 + tol/2}, {___, 1}, tol]];
+ AssertTrue[matchQN[{1.1}, {___, 1}, tol/2]];
  AssertTrue[matchQN[{1, 0}, {___, 5.1, ___}, 4.5]];
- AssertTrue[matchQN[{0}, {0.} | {1.}, 0.001]];
- AssertTrue[matchQN[{{0, 0}}, {{0., 0.}} | {{1., 0.}}, 0.001]];
- AssertTrue[matchQN[{{0}, 2}, {{1 | 0. | 0.1}, 1.9 | 1.8}, 0.2]];
+ AssertTrue[matchQN[{1, 0}, {___, 5.1, __}, 4.5]];
+ AssertTrue[matchQN[{1, 0, 0}, {_, tol ..}, tol]];
+ AssertTrue[matchQN[{1, 0, 0}, {_, tol ...}, tol]];
+ AssertTrue[matchQN[{1}, {_, tol ...}, tol]];
  (* Using examples from MatchQ documentation *)
  AssertTrue[Not@matchQN[x(1 + 2 x + 3 x^2), Plus[_, _[2.1, _], __], tol]];
  AssertTrue[matchQN[Expand[x(1 + 2 x + 3 x^2)], Plus[_, _[2.1, _], __], tol]];
@@ -258,6 +261,8 @@ AddTest["testMatchQN", With[{tol = 0.2},
  AssertTrue[matchQN[g[a + b, b, 0], g[x_ + y_, x_, tol], tol]];
  AssertTrue[matchQN[g[b + a, b, 0], g[x_ + y_, x_, tol], tol]];
  (* Some longer ones *)
+ AssertTrue[matchQN[{{0, 0}}, {{0., 0.}} | {{1., 0.}}, 0.001]];
+ AssertTrue[matchQN[{{0}, 2}, {{1 | 0. | 0.1}, 1.9 | 1.8}, 0.2]];
  AssertTrue[matchQN[
    {{"a", {"b", {}}}, 1},
    {{_String, {_String | _Integer, _List}}, 1.1}, tol]];
