@@ -51,7 +51,7 @@ AssertTrue[expr_] := With[{evaluated = expr},
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*AssertEqualsN, AssertMatchN*)
 
 
@@ -112,21 +112,30 @@ nonNumericalStructureMatchesQ[expr_, form_] :=
  MatchQ[expr, replaceNumericsWithNumericQPatterns[form]]
 replaceNumericsWithNumericQPatterns[form_] := form /.  _?NumericQ -> _?NumericQ
 
-numericalLeavesMatchToToleranceQ[expr_, form_, tol_] := 
- And @@ (
-  matchQN[Extract[form, #], extractLeafAtPositionInForm[expr, form, #], tol] & /@
-   positionsOfNumericalLeaves[form])
+numericalLeavesMatchToToleranceQ[expr_, form_, tol_] :=
+ And@@(leavesMatchQ[#,tol]& /@ handleAlternatives@pairUpNumericalLeaves[expr, form])
 
-Module[{x},
-extractLeafAtPositionInForm[expr_, form_, position_]:=
- First@Cases[expr,
-   replacePositionInFormWithLabeledNumericQPattern[form, position] :> x, 
-   All];
-replacePositionInFormWithLabeledNumericQPattern[form_, position_] :=
- replaceNumericsWithNumericQPatterns[ReplacePart[form, position -> x_?NumericQ]];
+pairUpNumericalLeaves[expr_, form_] := Module[{res, newForm, varsAndVals},
+ res = Reap[form /. z_?NumericQ :> With[{y = Unique[x]}, Sow@{y,z}; y_?NumericQ]];
+ newForm = First@res;
+ varsAndVals = res[[2,1]];
+ First@Cases[expr, newForm :> Evaluate@varsAndVals, All]
 ]
 
-positionsOfNumericalLeaves[form_] := Position[form, _?NumericQ]
+(* If there are Alternatives[...] in form, pairUpNumericalLeaves will give the value
+   to the first alternative and put rest of the alternatives as length 1 lists after.
+   Handle alternatives pulls them together into one list *)
+handleAlternatives[listOfLeaves : {{__}..}] :=
+ listOfLeaves //. 
+  {before___, {value_, alternatives__}, {anotherAlternative_}, after___} :>
+   {before, {value, alternatives, anotherAlternative}, after}
+
+leavesMatchQ[{leaf1_, leaf2_}, tol_] := matchQN[leaf1, leaf2, tol]
+(* If there are Alternatives[...] in form, handleAlternatives has pulled them together
+   into one list, only one needs to match. *)
+leavesMatchQ[{leaf1_, alternatives__}, tol_] :=
+ Or@@(matchQN[leaf1, #, tol]& /@ {alternatives})
+
 
 
 (* ::Subsubsection::Closed:: *)

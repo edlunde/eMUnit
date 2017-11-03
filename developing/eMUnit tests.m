@@ -203,7 +203,7 @@ AddTest["testAssertEqualsNThrow",
  ]];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test AssertMatchN*)
 
 
@@ -231,6 +231,10 @@ AddTest["testMatchQNExact", With[{tol = 0},
 
 AddTest["testMatchQN", With[{tol = 0.2},
  (* Start simple, one approximate numerical match to make sure the terms don't MatchQ exactly *)
+ AssertTrue[matchQN[0., 0, tol]];
+ AssertTrue[matchQN[0, 0., tol]];
+ AssertTrue[matchQN[0, 0. | 1., tol]];
+ AssertTrue[matchQN[0, 1. | 0., tol]];
  AssertTrue[matchQN[{"a", 1.1}, {_String, 1}, tol]];
  AssertTrue[matchQN[{1, 1.1}, {_Integer, 1}, tol]];
  AssertTrue[matchQN[{1, 1.1}, {_Integer | _String, 1}, tol]];
@@ -238,6 +242,9 @@ AddTest["testMatchQN", With[{tol = 0.2},
  Quiet@AssertNoMessage[matchQN[{1.1}, {___, 1}, tol]];
  AssertTrue[matchQN[{1.1}, {___, 1}, tol]];
  AssertTrue[matchQN[{1, 0}, {___, 5.1, ___}, 4.5]];
+ AssertTrue[matchQN[{0}, {0.} | {1.}, 0.001]];
+ AssertTrue[matchQN[{{0, 0}}, {{0., 0.}} | {{1., 0.}}, 0.001]];
+ AssertTrue[matchQN[{{0}, 2}, {{1 | 0. | 0.1}, 1.9 | 1.8}, 0.2]];
  (* Using examples from MatchQ documentation *)
  AssertTrue[Not@matchQN[x(1 + 2 x + 3 x^2), Plus[_, _[2.1, _], __], tol]];
  AssertTrue[matchQN[Expand[x(1 + 2 x + 3 x^2)], Plus[_, _[2.1, _], __], tol]];
@@ -247,6 +254,9 @@ AddTest["testMatchQN", With[{tol = 0.2},
  AssertTrue[Not@matchQN[<|a -> 1|>, <|_ -> 1.1+tol|>, tol]];
  AssertTrue[Not@matchQN[<|1 -> "foo"|>, <|1.1+tol -> x_/;StringQ[x]|>, tol]];
  AssertTrue[Not@matchQN[<|1 -> _|>, <|1.1+tol -> Verbatim[_]|>, tol]];
+ (* Check orderless *)
+ AssertTrue[matchQN[g[a + b, b, 0], g[x_ + y_, x_, tol], tol]];
+ AssertTrue[matchQN[g[b + a, b, 0], g[x_ + y_, x_, tol], tol]];
  (* Some longer ones *)
  AssertTrue[matchQN[
    {{"a", {"b", {}}}, 1},
@@ -258,7 +268,7 @@ AddTest["testMatchQN", With[{tol = 0.2},
    f[a, g[0.1, {a, {1, 2}}], g], _[a, g[__, {_, {1.1, 1.9}}], _], tol]];
  AssertTrue[matchQN[
    <|1 -> a, 2 -> g[0.1, {<|1 -> _|>, {1, 2}}], 3 -> g|>, 
-   _[0.9 -> _, _ -> g[__, {<|1.1 -> Verbatim[_]|>, {1.1, 1.9}}], _], tol]];
+   _[0.9 -> _, _ -> g[__, {<|1.1 -> Verbatim[_]|>, {1.2, 1.9}}], _], tol]];
 ]];
 ]
 

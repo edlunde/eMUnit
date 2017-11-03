@@ -8,12 +8,14 @@ Refactor tests so they are not dependent on all the eMUnit`Private` I have now.
  Maybe wrapper function that checks for a symbols context and adds it? Check tutorial/ManipulatingSymbolsAndContextsByName
  Maybe change the way I test them
 
+Change tests to use subsuites
 Look into Check, could use to simplify AssertMessage?
+
+matchQN - should {0, tol} match {x_, x_}?
 
 --- Maybe ---
 
-refactor tests to not explicitly depend on assertException?
-Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly? Or a function ClearSuite to do it explicitly?
+Add clearing of suite to BeginSuite so commenting out a test removes it without deleting it explicitly. If one wants to add more tests to a suite after EndSuite one should do it explicitly with AddTest[suite,...]
 
 should passOnMessages append to $MessageList instead?
 
