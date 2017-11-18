@@ -182,6 +182,11 @@ AddTest["testAssertEqualsNSuccessDefaultTolerance",
   Catch[AssertEqualsN[1, 1 + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
 ];
 
+AddTest["testAssertEqualsNListSuccess",
+ AssertEquals[Null, 
+  Catch[AssertEqualsN[{{1}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+];
+
 AddTest["testAssertEqualsNSuccessOnExactTolerance",
  AssertEquals[Null, Catch[AssertEqualsN[1, 2, Tolerance -> 1], "AssertEqualsN"]]
 ];
@@ -201,9 +206,21 @@ AddTest["testAssertEqualsNThrow",
                    HoldComplete[AssertEqualsN[1, x, Tolerance -> 0.5]], x], 
                Catch[AssertEqualsN[1, x, Tolerance -> 0.5], "AssertEqualsN"]]
  ]];
+AddTest["testAssertEqualsNListThrow",
+ AssertEquals[eMUnit`Private`assertException[
+                   HoldComplete[AssertEqualsN[{{1}, 1}, {1, 1} + 10*Tolerance /. Options[AssertEqualsN], Tolerance -> 0.001]], {1.01, 1.01}], 
+               Catch[AssertEqualsN[{{1}, 1}, {1, 1} + 10*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+];
+AddTest["testAssertEqualsNListWithNonNumericEntriesThrow",
+Module[{a},
+  AssertEquals[eMUnit`Private`assertException[
+                HoldComplete[AssertEqualsN[{{a}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN], Tolerance -> 0.001]], {1.0001, 1.0001}], 
+               Catch[AssertEqualsN[{{a}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+ ]
+];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Test AssertMatchN*)
 
 

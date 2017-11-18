@@ -51,7 +51,7 @@ AssertTrue[expr_] := With[{evaluated = expr},
     throwAssertException["AssertTrue", AssertTrue[expr], evaluated]]]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*AssertEqualsN, AssertMatchN*)
 
 
@@ -76,7 +76,7 @@ SetAttributes[AssertEqualsN, HoldRest];
 AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
  With[
   {evaluated = expr, tol = getTolerance@OptionValue[Tolerance]},
-  If[N@Abs[shouldBe - evaluated] <= tol, Null, 
+  If[TrueQ[Max[N@Abs[shouldBe - evaluated]] <= tol], Null, 
    throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
     evaluated]]];
 
