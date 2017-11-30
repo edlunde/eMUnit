@@ -8,8 +8,8 @@
 (*Asserts*)
 
 
-AssertEquals::usage = "AssertEquals[value, expression] returns Null if expression \
-evaluates to value. Otherwise it throws an AssertEquals-exception to be caught \
+AssertEquals::usage = "AssertEquals[result, expression] returns Null if expression \
+evaluates to result. Otherwise it throws an AssertEquals-exception to be caught \
 by RunTest.";
 
 
@@ -23,8 +23,8 @@ evaluates to True. Otherwise it throws an AssertTrue-exception to be caught \
 by RunTest.";
 
 
-AssertEqualsN::usage = "AssertEquals[value, expression, Tolerance -> 0.001] returns \
-Null if expression evaluates numerically to within Tolerance of value. Otherwise it \
+AssertEqualsN::usage = "AssertEquals[result, expression, Tolerance -> 0.001] returns \
+Null if expression evaluates numerically to within Tolerance of result. Otherwise it \
 throws an AssertEquals-exception to be caught by RunTest.";
 
 

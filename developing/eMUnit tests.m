@@ -169,8 +169,54 @@ AddTest["testAssertTrueUnevaluating",
  ]];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test AssertEqualsN*)
+
+
+With[{sameQN = eMUnit`Private`sameQN},
+AddTest["testSameQNExact",
+ AssertTrue[sameQN[1, 1, 0.1]];
+ AssertTrue[sameQN["a", "a", 0.1]];
+ AssertTrue[sameQN[{"a"}, {"a"}, 0.1]];
+ AssertTrue[sameQN[{"a", 1, 2}, {"a", 1, 2}, 0.1]];
+ AssertTrue[sameQN[{"a", {1}, 2}, {"a", {1}, 2}, 0.1]];
+ AssertTrue[sameQN[{"a", b[1], 2}, {"a", b[1], 2}, 0.1]];
+ 
+ AssertTrue[!sameQN[1, 2, 0.1]];
+ AssertTrue[!sameQN["a", "b", 0.1]];
+ AssertTrue[!sameQN[{"a"}, {"b"}, 0.1]];
+ AssertTrue[!sameQN[{"a", b[1], 2}, {"a", b[2], 2}, 0.1]];
+ 
+ AssertTrue[!sameQN[{"a", 1, 2}, {"a", {1}, 2}, 0.1]];
+ AssertTrue[!sameQN[{"a", {1}, 2}, {"a", {{1}}, 2}, 0.1]];
+ AssertTrue[!sameQN[{"a", b[1], 2}, {"a", a[1], 2}, 0.1]];
+];
+
+AddTest["testSameQNApproximate",
+ AssertTrue[sameQN[1, 1.01, 0.1]];
+ AssertTrue[sameQN[{"a", 1, 2}, {"a", 1, 2.01}, 0.1]];
+ AssertTrue[sameQN[{"a", {1}, 2}, {"a", {1.01}, 2}, 0.1]];
+ AssertTrue[sameQN[{"a", b[1], 2}, {"a", b[1.01], 2}, 0.1]];
+];
+
+AddTest["testSameQNAssociation",
+ AssertTrue[sameQN[<|1 -> "a", 2 -> 1, 3 -> 2|>, <|1 -> "a", 2 -> 1.01, 3 -> 2|>, 0.1]];
+ AssertTrue[sameQN[<|1 -> "a", 2 -> 1, 3 -> 2|>, <|1 -> "a", 2.01 -> 1, 3 -> 2|>, 0.1]];
+ AssertTrue[sameQN[<|1.01 -> "a", 2 -> 1, 3.01 -> 2|>, <|1 -> "a", 2 -> 1, 3 -> 2.01|>, 0.1]];
+ AssertTrue[sameQN[<|1.01 -> "a", 2 -> {1}, 3.01 -> 2|>, <|1 -> "a", 2 -> {1}, 3 -> 2.01|>, 0.1]];
+ AssertTrue[sameQN[<|1.01 -> "a", 2 -> <|1.01 -> 1|>, 3.01 -> 2|>, <|1 -> "a", 2 -> <|1 -> 1|>, 3 -> 2.01|>, 0.1]];
+ AssertTrue[sameQN[<|1.01 -> "a", 2 -> <|1 -> 1|>, 3.01 -> 2|>, <|1 -> "a", 2 -> <|1 -> 1.01|>, 3 -> 2.01|>, 0.1]];
+];
+
+AddTest["testSameQNisNotMatchQN",
+ AssertTrue[!sameQN[1, _, 0.1]];
+ AssertTrue[!sameQN[{"a", 1, 2}, {"a", _, 2}, 0.1]];
+ AssertTrue[!sameQN[{"a", _, 2}, {"a", 1, 2}, 0.1]];
+ AssertTrue[!sameQN[{"a", 1, 2}, {"a", 2 | 1, 2}, 0.1]];
+ AssertTrue[!sameQN[{"a", {1}, 2}, {"a", {_}, 2}, 0.1]];
+ AssertTrue[!sameQN[{"a", b[1], 2}, {"a", b[_], 2}, 0.1]];
+];
+]
 
 
 AddTest["testAssertEqualsNSuccessExact",
@@ -184,7 +230,7 @@ AddTest["testAssertEqualsNSuccessDefaultTolerance",
 
 AddTest["testAssertEqualsNListSuccess",
  AssertEquals[Null, 
-  Catch[AssertEqualsN[{{1}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+  Catch[AssertEqualsN[{1, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
 ];
 
 AddTest["testAssertEqualsNSuccessOnExactTolerance",
@@ -208,8 +254,8 @@ AddTest["testAssertEqualsNThrow",
  ]];
 AddTest["testAssertEqualsNListThrow",
  AssertEquals[eMUnit`Private`assertException[
-                   HoldComplete[AssertEqualsN[{{1}, 1}, {1, 1} + 10*Tolerance /. Options[AssertEqualsN], Tolerance -> 0.001]], {1.01, 1.01}], 
-               Catch[AssertEqualsN[{{1}, 1}, {1, 1} + 10*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
+                   HoldComplete[AssertEqualsN[{{1}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN], Tolerance -> 0.001]], {1.0001, 1.0001}], 
+               Catch[AssertEqualsN[{{1}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
 ];
 AddTest["testAssertEqualsNListWithNonNumericEntriesThrow",
 Module[{a},

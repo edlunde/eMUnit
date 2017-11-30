@@ -76,7 +76,7 @@ SetAttributes[AssertEqualsN, HoldRest];
 AssertEqualsN[shouldBe_, expr_, OptionsPattern[]] := 
  With[
   {evaluated = expr, tol = getTolerance@OptionValue[Tolerance]},
-  If[TrueQ[Max[N@Abs[shouldBe - evaluated]] <= tol], Null, 
+  If[sameQN[shouldBe, evaluated, tol], Null, 
    throwAssertException["AssertEqualsN", AssertEqualsN[shouldBe, expr, Tolerance -> tol], 
     evaluated]]];
 
@@ -91,6 +91,38 @@ AssertMatchN[form_, expr_, OptionsPattern[]] :=
    evaluated]]];
 
 
+ClearAll@sameQN
+sameQN[lhs_, rhs_, tol_] /; SameQ[lhs, rhs] := True
+sameQN[lhs_?NumericQ, rhs_?NumericQ, tol_] :=
+ Abs[lhs - rhs] <= tol
+
+sameQN[lhsIn_, rhsIn_, tol_] := 
+ With[{lhs = handleAssociations[lhsIn], rhs = handleAssociations[rhsIn]},
+  nonNumericalStructureSameQ[lhs, rhs] &&
+   numericalLeavesSameToToleranceQ[lhs, rhs, tol]]
+   
+nonNumericalStructureSameQ[lhs_, rhs_] := 
+  SameQ @@ (replaceNumericsWithSymbol /@ {lhs, rhs})
+replaceNumericsWithSymbol[expr_] := expr /. _?NumericQ -> Symbol
+
+numericalLeavesSameToToleranceQ[lhs_, rhs_, tol_] := 
+  And @@ (sameQN[#1, #2, tol] & @@@ pairUpNumericalLeaves[lhs, rhs])
+
+
+pairUpNumericalLeaves[expr_, form_] := Module[{res, newForm, varsAndVals},
+ res = Reap[form /. z_?NumericQ :> With[{y = Unique[x]}, Sow@{y,z}; y_?NumericQ]];
+ newForm = First@res;
+ varsAndVals = res[[2,1]];
+ First@Cases[expr, newForm :> Evaluate@varsAndVals, All]
+]
+
+(* Associations behave as atoms in replacements so we need to change them to
+   some head with more standard behavior. Chose association over List or similar
+   to hopefully make stack traces easier to read. *)
+handleAssociations[expr_] := 
+ expr /. Association -> association
+
+
 ClearAll@matchQN
 matchQN[expr_, form_, tol_] /; MatchQ[expr, form] := True
 matchQN[expr_?NumericQ, form_?NumericQ, tol_] :=
@@ -101,12 +133,6 @@ matchQN[exprIn_, formIn_, tol_] :=
  With[{expr = handleAssociations[exprIn], form = handleAssociations[formIn]},
   nonNumericalStructureMatchesQ[expr, form] &&
    numericalLeavesMatchToToleranceQ[expr, form, tol]]
-
-(* Associations behave as atoms in replacements so we need to change them to
-   some head with more standard behavior. Chose association over List or similar
-   to hopefully make stack traces easier to read. *)
-handleAssociations[expr_] := 
- expr /. Association -> association
   
 nonNumericalStructureMatchesQ[expr_, form_] :=
  MatchQ[expr, replaceNumericsWithNumericQPatterns[form]]
@@ -114,13 +140,6 @@ replaceNumericsWithNumericQPatterns[form_] := form /.  _?NumericQ -> _?NumericQ
 
 numericalLeavesMatchToToleranceQ[expr_, form_, tol_] :=
  And@@(leavesMatchQ[#,tol]& /@ handleAlternatives@pairUpNumericalLeaves[expr, form])
-
-pairUpNumericalLeaves[expr_, form_] := Module[{res, newForm, varsAndVals},
- res = Reap[form /. z_?NumericQ :> With[{y = Unique[x]}, Sow@{y,z}; y_?NumericQ]];
- newForm = First@res;
- varsAndVals = res[[2,1]];
- First@Cases[expr, newForm :> Evaluate@varsAndVals, All]
-]
 
 (* If there are Alternatives[...] in form, pairUpNumericalLeaves will give the value
    to the first alternative and put rest of the alternatives as length 1 lists after.
