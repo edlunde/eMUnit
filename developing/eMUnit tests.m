@@ -62,7 +62,7 @@ Module[{result, f, i = 0},
 ]]];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Start of framework*)
 
 
@@ -95,11 +95,17 @@ AddTest["Tear Down",
 (*Test Asserts*)
 
 
+AddSuite[frameworkTests, assertTests];
+
+
 (* ::Subsubsection::Closed:: *)
 (*Test AssertMatch*)
 
 
-AddTest["testAssertMatchSuccess",
+AddSuite[assertTests, assertMatchTests];
+
+
+AddTest[assertMatchTests, "testSuccess",
   AssertEquals[Null, Catch[AssertMatch[
     {{_String, {_String | _Integer, _List}}, _String | _Integer}, 
     {{"a", {"b", {}}}, 1}], "AssertMatch"]];
@@ -122,7 +128,8 @@ AddTest["testAssertMatchSuccess",
     <|a->Verbatim[_]|>, <|a->_|>], "AssertMatch"]];
  ];
 
-AddTest["testAssertMatchFailed", Module[{result},
+
+AddTest[assertMatchTests, "testFailed", Module[{result},
   AssertEquals[
       eMUnit`Private`assertException[HoldComplete[AssertMatch[_Symbol, 1]], 1],
       Catch[AssertMatch[_Symbol, 1], "AssertMatch"]];
@@ -137,7 +144,8 @@ AddTest["testAssertMatchFailed", Module[{result},
       Catch[AssertMatch[0, 1 + 1/GoldenRatio - GoldenRatio], "AssertMatch"]];
  ]];
 
-AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
+
+AddTest[assertMatchTests, "testFailedEvaluatesOnce", Module[{i = 0, result},
   result = Catch[AssertMatch[0, ++i], "AssertMatch"];
   AssertEquals[1, i];
   AssertEquals[
@@ -151,18 +159,23 @@ AddTest["testAssertMatchFailedEvaluatesOnce", Module[{i = 0, result},
 (*Test AssertTrue*)
 
 
-AddTest["testAssertTrueSuccess", 
+AddSuite[assertTests, assertTrueTests];
+
+
+AddTest[assertTrueTests, "testSuccess", 
  AssertEquals[Null, Catch[AssertTrue[1 == 1], "AssertTrue"]];
  AssertEquals[Null, Catch[AssertTrue[2 > 1], "AssertTrue"]];
  AssertEquals[Null, Catch[AssertTrue[NumericQ@0.2], "AssertTrue"]];
 ];
 
-AddTest["testAssertTrueFailure", 
+
+AddTest[assertTrueTests, "testFailure", 
  AssertEquals[eMUnit`Private`assertException[HoldComplete[AssertTrue[1 < 0]], False],
   Catch[AssertTrue[1 < 0], "AssertTrue"]];
 ];
 
-AddTest["testAssertTrueUnevaluating",
+
+AddTest[assertTrueTests, "testUnevaluating",
  Module[{a, result}, ClearAll[a]; 
   result = Catch[AssertTrue[a], "AssertTrue"]; 
   AssertMatch[_[HoldComplete[AssertTrue[_]], _], result];
@@ -173,8 +186,11 @@ AddTest["testAssertTrueUnevaluating",
 (*Test AssertEqualsN*)
 
 
+AddSuite[assertTests, assertEqualsNTests];
+
+
 With[{sameQN = eMUnit`Private`sameQN},
-AddTest["testSameQNExact",
+AddTest[assertEqualsNTests, "testSameQNExact",
  AssertTrue[sameQN[1, 1, 0.1]];
  AssertTrue[sameQN["a", "a", 0.1]];
  AssertTrue[sameQN[{"a"}, {"a"}, 0.1]];
@@ -192,14 +208,14 @@ AddTest["testSameQNExact",
  AssertTrue[!sameQN[{"a", b[1], 2}, {"a", a[1], 2}, 0.1]];
 ];
 
-AddTest["testSameQNApproximate",
+AddTest[assertEqualsNTests, "testSameQNApproximate",
  AssertTrue[sameQN[1, 1.01, 0.1]];
  AssertTrue[sameQN[{"a", 1, 2}, {"a", 1, 2.01}, 0.1]];
  AssertTrue[sameQN[{"a", {1}, 2}, {"a", {1.01}, 2}, 0.1]];
  AssertTrue[sameQN[{"a", b[1], 2}, {"a", b[1.01], 2}, 0.1]];
 ];
 
-AddTest["testSameQNAssociation",
+AddTest[assertEqualsNTests, "testSameQNAssociation",
  AssertTrue[sameQN[<|1 -> "a", 2 -> 1, 3 -> 2|>, <|1 -> "a", 2 -> 1.01, 3 -> 2|>, 0.1]];
  AssertTrue[sameQN[<|1 -> "a", 2 -> 1, 3 -> 2|>, <|1 -> "a", 2.01 -> 1, 3 -> 2|>, 0.1]];
  AssertTrue[sameQN[<|1.01 -> "a", 2 -> 1, 3.01 -> 2|>, <|1 -> "a", 2 -> 1, 3 -> 2.01|>, 0.1]];
@@ -208,7 +224,7 @@ AddTest["testSameQNAssociation",
  AssertTrue[sameQN[<|1.01 -> "a", 2 -> <|1 -> 1|>, 3.01 -> 2|>, <|1 -> "a", 2 -> <|1 -> 1.01|>, 3 -> 2.01|>, 0.1]];
 ];
 
-AddTest["testSameQNisNotMatchQN",
+AddTest[assertEqualsNTests, "testSameQNisNotMatchQN",
  AssertTrue[!sameQN[1, _, 0.1]];
  AssertTrue[!sameQN[{"a", 1, 2}, {"a", _, 2}, 0.1]];
  AssertTrue[!sameQN[{"a", _, 2}, {"a", 1, 2}, 0.1]];
@@ -219,45 +235,45 @@ AddTest["testSameQNisNotMatchQN",
 ]
 
 
-AddTest["testAssertEqualsNSuccessExact",
+AddTest[assertEqualsNTests, "testSuccessExact",
  AssertEquals[Null, Catch[AssertEqualsN[1, 1], "AssertEqualsN"]]
 ];
 
-AddTest["testAssertEqualsNSuccessDefaultTolerance",
+AddTest[assertEqualsNTests, "testSuccessDefaultTolerance",
  AssertEquals[Null, 
   Catch[AssertEqualsN[1, 1 + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
 ];
 
-AddTest["testAssertEqualsNListSuccess",
+AddTest[assertEqualsNTests, "testListSuccess",
  AssertEquals[Null, 
   Catch[AssertEqualsN[{1, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
 ];
 
-AddTest["testAssertEqualsNSuccessOnExactTolerance",
+AddTest[assertEqualsNTests, "testSuccessOnExactTolerance",
  AssertEquals[Null, Catch[AssertEqualsN[1, 2, Tolerance -> 1], "AssertEqualsN"]]
 ];
 
-AddTest["testAssertEqualsNSuccessLargeTolerance",
+AddTest[assertEqualsNTests, "testSuccessLargeTolerance",
  AssertEquals[Null, Catch[AssertEqualsN[1, 5.1, Tolerance -> 4.5], "AssertEqualsN"]]
 ];
 
-AddTest["testAssertEqualsNNonNumericTolerance",
+AddTest[assertEqualsNTests, "testNonNumericTolerance",
  AssertMessage[eMUnitMessages::nonNumericTolerance, 
   Catch[AssertEqualsN[1, 5.1, Tolerance -> "string"], "AssertEqualsN"]]
 ];
 
-AddTest["testAssertEqualsNThrow", 
+AddTest[assertEqualsNTests, "testThrow", 
  With[{x = 1.7},
   AssertEquals[eMUnit`Private`assertException[
                    HoldComplete[AssertEqualsN[1, x, Tolerance -> 0.5]], x], 
                Catch[AssertEqualsN[1, x, Tolerance -> 0.5], "AssertEqualsN"]]
  ]];
-AddTest["testAssertEqualsNListThrow",
+AddTest[assertEqualsNTests, "testListThrow",
  AssertEquals[eMUnit`Private`assertException[
                    HoldComplete[AssertEqualsN[{{1}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN], Tolerance -> 0.001]], {1.0001, 1.0001}], 
                Catch[AssertEqualsN[{{1}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN]], "AssertEqualsN"]]
 ];
-AddTest["testAssertEqualsNListWithNonNumericEntriesThrow",
+AddTest[assertEqualsNTests, "testListWithNonNumericEntriesThrow",
 Module[{a},
   AssertEquals[eMUnit`Private`assertException[
                 HoldComplete[AssertEqualsN[{{a}, 1}, {1, 1} + 0.1*Tolerance /. Options[AssertEqualsN], Tolerance -> 0.001]], {1.0001, 1.0001}], 
@@ -719,10 +735,6 @@ AddTest["testRunTestRunsSetUp",
    RunTest["setsUp"];
    AssertTrue[!ValueQ[isStillSetUp]];
   ]];
-
-
-(* ::Subsection:: *)
-(*Test Format*)
 
 
 (* ::Subsubsection::Closed:: *)

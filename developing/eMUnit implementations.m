@@ -254,7 +254,11 @@ BeginSubsuite[subsuite_Symbol] :=
   runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
+(*RunTest*)
+
+
+(* ::Subsubsection::Closed:: *)
 (*RunTest*)
 
 
@@ -297,8 +301,8 @@ getFailureExpressionString[failure_?isFailure] :=
  getAssertExceptionExprString[getResult[failure]]
 
 
-(* ::Subsection::Closed:: *)
-(*Format*)
+(* ::Subsubsection::Closed:: *)
+(*Format test results*)
 
 
 formatTestResult[results : {__testResult}] :=
@@ -311,25 +315,36 @@ formatTestResult[results : {__testResult}] :=
                formatSummaryString[nTests, time, nFailures]},
               formatFailureString /@ failures]]
   ]
+
+
+(* Counts the number of actual test, no matter how the subsuite structure looks like *)
+countTests[results : {__testResult}] := Length @ 
+    casesDontEnterHold[results, res_testResult /; isNotSubsuiteResultQ[res]]
+isNotSubsuiteResultQ[result_testResult] := Not@MatchQ[getResult[result], {__testResult}]
+
+
+extractFailures[results : {__testResult}] := casesDontEnterHold[results, _?isFailure]
+
+
+(* Failed tests reports the instruction that made them fail within HoldComplete 
+   so they don't run the instruction again. casesDontEnterHold is for doing Cases[..]
+   without entering such HoldCompletes *)
+casesDontEnterHold[exp_, patt_] := 
+  Reap[casesHold[exp, patt]] /. Null -> Sequence[] // Flatten
+casesHold[HoldComplete[exp_], patt_] := HoldComplete[exp]
+casesHold[exp_, patt_] := 
+  (If[MatchQ[exp, patt], Sow[exp]]; casesHold[#, patt] & /@ exp;)
+
+
 formatSummaryString[nResults_Integer, time_?NumericQ, nFailures_Integer] := 
   ToString[nResults] <> " run in " <> ToString@Round[time, 0.01] <> " s, " <> 
    ToString[nFailures] <> " failed"
 formatFailureString[failure_testResult] := 
   getTest[failure] <> " - Failed " <> getFailureExpressionString[failure] <>  
     ", gave " <> ToString[getFailureResult[failure], InputForm]
-    
+
+
 drawBar[nFailures_Integer] := 
  Graphics[{If[nFailures > 0, Red, Green], 
    Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
   ImageSize -> 600]
-
-countTests[results : {__testResult}] := Length @ 
-    CasesDontEnterHold[results, res_testResult /; Not@isSubsuiteResultQ[res]]
-isSubsuiteResultQ[result_testResult] := MatchQ[getResult[result], {__testResult}]
-extractFailures[results : {__testResult}] := CasesDontEnterHold[results, _?isFailure]
-
-casesHold[HoldComplete[exp_], patt_] := HoldComplete[exp]
-casesHold[exp_, patt_] := 
-  (If[MatchQ[exp, patt], Sow[exp]]; casesHold[#, patt] & /@ exp;)
-CasesDontEnterHold[exp_, patt_] := 
-  Reap[casesHold[exp, patt]] /. Null -> Sequence[] // Flatten
