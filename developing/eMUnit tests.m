@@ -62,7 +62,7 @@ Module[{result, f, i = 0},
 ]]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Start of framework*)
 
 
@@ -182,7 +182,7 @@ AddTest[assertTrueTests, "testUnevaluating",
  ]];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Test AssertEqualsN*)
 
 
@@ -772,7 +772,29 @@ AddTest["testFormatOneEachTestResult",
 ];
 
 
-AddTest["testFormatHierarchicalTestResult",
+AddTest["testFormatAssertMessageExpectedMessage", 
+ AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
+ AssertMatch[
+   Column[{_Graphics, 
+      "1 run in 0. s, 1 failed", 
+      "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
+   RunTest[]];
+];
+AddTest["testFormatAssertNoMessage", 
+ Module[{formattedResult},
+  mess::aMessage = "Message!";
+  AddTest["aTest", AssertNoMessage[Message[mess::aMessage]]];
+  Quiet[formattedResult = RunTest[], mess::aMessage];
+  AssertMatch[
+   Column[{_Graphics, 
+      "1 run in 0. s, 1 failed", 
+      "aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
+ gave {HoldForm[eMUnit`PackageTests`mess::aMessage]}"}], 
+   formattedResult];
+]];
+
+
+AddTest["testFormatTestResultSubsuites",
  Module[{formattedResult, level1, level2, level3, i = 0},
   BeginSuite[level1];
   AddTest["test1.1", i++];
@@ -796,24 +818,32 @@ AddTest["testFormatHierarchicalTestResult",
 ]];
 
 
-AddTest["testFormatAssertMessageExpectedMessage", 
- AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
- AssertMatch[
-   Column[{_Graphics, 
-      "1 run in 0. s, 1 failed", 
-      "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
-   RunTest[]];
-];
-AddTest["testFormatAssertNoMessage", 
- Module[{formattedResult},
-  mess::aMessage = "Message!";
-  AddTest["aTest", AssertNoMessage[Message[mess::aMessage]]];
-  Quiet[formattedResult = RunTest[], mess::aMessage];
+AddTest["testFormatHierarchicalTestResultSubsuites",
+ Module[{formattedResult, level1, level2, level3, i = 0},
+  BeginSuite[level1];
+    AddTest["test1.1", i++];
+    BeginSubsuite[level2];
+      AddTest["test2.1", i+=2];
+      AddTest["test2.2", i+=3; AssertEquals[1, -1]];
+      BeginSubsuite[level3];
+        AddTest["test3.1", i+=4; AssertTrue[1 < 0]];
+        AddTest["test3.2", i+=5];
+      EndSuite[];
+    EndSuite[];
+  EndSuite[];
+  formattedResult = RunTest[level1, ReportMethod -> "Hierarchical"];
+  AssertEquals[15, i];
   AssertMatch[
    Column[{_Graphics, 
-      "1 run in 0. s, 1 failed", 
-      "aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
- gave {HoldForm[eMUnit`PackageTests`mess::aMessage]}"}], 
+    "5 run in 0. s, 2 failed", 
+    " test1.1 0.00", 
+    "-" <> ToString@level2 <> " 0.00\n" <> 
+    "     test2.1 0.00\n" <> 
+    "    -test2.2 0.00\n" <> 
+    "    -" <> ToString@level3 <> " 0.00\n" <> 
+    "        -test3.1 0.00\n" <> 
+    "         test3.2 0.00"
+    }], 
    formattedResult];
 ]];
 

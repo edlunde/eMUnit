@@ -262,14 +262,17 @@ BeginSubsuite[subsuite_Symbol] :=
 (*RunTest*)
 
 
-RunTest[] := runIfSuiteSet[RunTest[currentSuite[]]]
-RunTest[suite_Symbol] := formatTestResult[runTest[suite]]
-RunTest[stringPattern_?isStringPatternQ] := 
-  runIfSuiteSet[RunTest[currentSuite[], stringPattern]]
+Options[RunTest] = {ReportMethod -> "Failures"};
+RunTest[opts : OptionsPattern[]] := 
+ runIfSuiteSet[RunTest[currentSuite[], opts]]
+RunTest[suite_Symbol, opts : OptionsPattern[]] := 
+ formatTestResult[runTest[suite], opts]
+RunTest[stringPattern_?isStringPatternQ, opts : OptionsPattern[]] := 
+ runIfSuiteSet[RunTest[currentSuite[], stringPattern, opts]]
 
-RunTest[suite_Symbol, stringPattern_?isStringPatternQ] /; 
- testExists[suite, stringPattern] := 
-    formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern]]
+RunTest[suite_Symbol, stringPattern_?isStringPatternQ, opts : OptionsPattern[]] /; 
+    testExists[suite, stringPattern] := 
+ formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern], opts]
 selectTests[suite_Symbol, pattern_] := 
   Select[ListTests[suite], StringQ[#] && StringMatchQ[#, pattern] &]
 testExists[suite_Symbol, pattern_] := 
@@ -301,20 +304,27 @@ getFailureExpressionString[failure_?isFailure] :=
  getAssertExceptionExprString[getResult[failure]]
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Format test results*)
 
 
-formatTestResult[results : {__testResult}] :=
- Module[{reportString, nTests, time, failures, nFailures},
+formatTestResult[results : {__testResult}, OptionsPattern[RunTest]] :=
+ Module[{nTests, time, nFailures, reportString},
   nTests = countTests[results];
   time = Total[getTime /@ results];
-  failures = extractFailures[results];
-  nFailures = Length@failures;
+  nFailures = Length@extractFailures@results;
+  reportString = getReportString[results, OptionValue[ReportMethod]];
   Column[Join[{drawBar[nFailures], 
                formatSummaryString[nTests, time, nFailures]},
-              formatFailureString /@ failures]]
+               reportString]]
   ]
+
+getReportString[results : {__testResult}, "Failures"] := 
+ formatFailureString /@ extractFailures[results]
+getReportString[results : {__testResult}, "Hierarchical"] := 
+ formatHierarchical /@ results
+getReportString[results : {__testResult}, opt___] := 
+ Throw["Unknown option in formatTestResult"]
 
 
 (* Counts the number of actual test, no matter how the subsuite structure looks like *)
@@ -336,6 +346,12 @@ casesHold[exp_, patt_] :=
   (If[MatchQ[exp, patt], Sow[exp]]; casesHold[#, patt] & /@ exp;)
 
 
+drawBar[nFailures_Integer] := 
+ Graphics[{If[nFailures > 0, Red, Green], 
+   Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
+  ImageSize -> 600]
+
+
 formatSummaryString[nResults_Integer, time_?NumericQ, nFailures_Integer] := 
   ToString[nResults] <> " run in " <> ToString@Round[time, 0.01] <> " s, " <> 
    ToString[nFailures] <> " failed"
@@ -344,7 +360,22 @@ formatFailureString[failure_testResult] :=
     ", gave " <> ToString[getFailureResult[failure], InputForm]
 
 
-drawBar[nFailures_Integer] := 
- Graphics[{If[nFailures > 0, Red, Green], 
-   Rectangle[{0, 0}, {15, 1}]}, Method -> {"ShrinkWrap" -> True}, 
-  ImageSize -> 600]
+formatHierarchical[result_?isNotSubsuiteResultQ, _String] :=
+ statusMark@result <> getTest@result<>" "<> formatTime@getTime@result
+
+formatHierarchical[result_testResult] := formatHierarchical[result, ""]
+formatHierarchical[result_testResult, indentationIn_String] :=
+ With[{indentation = indentationIn <> "    "},
+  statusMark@result <> ToString@getTest@result <> " " <> 
+   formatTime@getTime@result <> "\n" <> 
+   indentation <> StringRiffle[formatHierarchical[#, indentation] & /@ 
+                                getResult@result, "\n" <> indentation]
+ ]
+
+formatTime[t_?NumericQ] := If[#==0., "0.00", ToString@#] & @ Round[t, 0.01]
+
+statusMark[result_testResult] := If[containsFailure@result, failureMark, successMark]
+containsFailure[result_?isNotSubsuiteResultQ] := isFailure@result
+containsFailure[result_testResult] := Length[extractFailures@getResult@result] > 0
+failureMark = "-";
+successMark = StringJoin@@Array[" "&, StringLength@failureMark];

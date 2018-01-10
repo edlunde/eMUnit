@@ -4,7 +4,7 @@
 (*Declarations*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Asserts*)
 
 
@@ -76,7 +76,9 @@ with EndSuite[] just like BeginSuite.";
 RunTest::usage = "RunTest[suite, stringPattern] runs all tests matching stringPattern \
 and formats the output.\n\
 RunTest[suite] runs all tests in the suite and formats the output.\n\
-RunTest[] runs all tests in the current suite.";
+RunTest[] runs all tests in the current suite.\n\
+Use option ReportMethod -> \"Hierarchical\" to see how time used is distributed over \
+the tests.";
 
 
 (* ::Subsection::Closed:: *)

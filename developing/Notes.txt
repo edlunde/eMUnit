@@ -1,6 +1,7 @@
 --- ToDo ---
 
-verbose - report timing for each test and suite
+proper error message when wrong option given to RunTest[__, ReportMethod -> opt]
+
 Check errors in AddTest is caught by our testing
 
 Refactor tests so they are not dependent on all the eMUnit`Private` I have now. 
