@@ -62,7 +62,7 @@ Module[{result, f, i = 0},
 ]]];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Start of framework*)
 
 
@@ -79,14 +79,13 @@ TestEMUnitPackage[] := With[{string =
 
 
 ClearAll[frameworkTests];
-BeginSuite[frameworkTests];
 
 
-AddTest["Set Up", 
+AddTest[frameworkTests, "Set Up", 
  ClearAll[mytests, anotherSuite]; 
  BeginSuite[mytests];];
  
-AddTest["Tear Down", 
+AddTest[frameworkTests, "Tear Down", 
  EndSuite[]; 
  ClearAll[mytests, anotherSuite]];
 
@@ -286,8 +285,11 @@ Module[{a},
 (*Test AssertMatchN*)
 
 
+AddSuite[assertTests, assertMatchNTests];
+
+
 With[{matchQN = eMUnit`Private`matchQN},
-AddTest["testMatchQNExact", With[{tol = 0},
+AddTest[assertMatchNTests, "testMatchQNExact", With[{tol = 0},
  AssertTrue[matchQN[
    {{"a", {"b", {}}}, 1},
    {{_String, {_String | _Integer, _List}}, _String | _Integer}, tol]];
@@ -308,7 +310,7 @@ AddTest["testMatchQNExact", With[{tol = 0},
  AssertTrue[matchQN[<|a->_|>, <|a->Verbatim[_]|>, tol]];
 ]];
 
-AddTest["testMatchQN", With[{tol = 0.2},
+AddTest[assertMatchNTests, "testMatchQN", With[{tol = 0.2},
  AssertTrue[tol < 1]; (* Assumption used in tests below *)
  (* Start simple, one approximate numerical match to make sure the terms don't MatchQ exactly *)
  AssertTrue[matchQN[0., 0, tol]];
@@ -357,7 +359,7 @@ AddTest["testMatchQN", With[{tol = 0.2},
 ]
 
 
-AddTest["testAssertMatchNSuccessExact",
+AddTest[assertMatchNTests, "testAssertMatchNSuccessExact",
  AssertEquals[Null, Catch[AssertMatchN[
     {{_String, {_String | _Integer, _List}}, _String | _Integer}, 
     {{"a", {"b", {}}}, 1}], "AssertMatchN"]];
@@ -369,7 +371,7 @@ AddTest["testAssertMatchNSuccessExact",
     f[a, g[0.1, {a, {1, 2}}], g]], "AssertMatchN"]];
 ];
 
-AddTest["testAssertMatchNSuccessDefaultTolerance", 
+AddTest[assertMatchNTests, "testAssertMatchNSuccessDefaultTolerance", 
 With[{tol = Tolerance /. Options[AssertMatchN]},
  AssertEquals[Null, Catch[AssertMatchN[
    1, 1 + 0.1*tol], "AssertMatchN"]];
@@ -380,25 +382,25 @@ With[{tol = Tolerance /. Options[AssertMatchN]},
     <|_ -> 1|>, <|a -> 1 + 0.1*tol|>], "AssertMatchN"]];
 ]];
 
-AddTest["testAssertMatchNSuccessOnExactTolerance",
+AddTest[assertMatchNTests, "testAssertMatchNSuccessOnExactTolerance",
  AssertEquals[Null, Catch[AssertMatchN[1, 2, Tolerance -> 1], "AssertMatchN"]];
  AssertEquals[Null, Catch[AssertMatchN[
    {{2}, _}, {{1}, {3}}, Tolerance -> 1], "AssertMatchN"]];
 ];
 
-AddTest["testAssertMatchNSuccessLargeTolerance",
+AddTest[assertMatchNTests, "testAssertMatchNSuccessLargeTolerance",
  AssertEquals[Null, Catch[AssertMatchN[
    {5.1, _}, {1, 0}, Tolerance -> 4.5], "AssertMatchN"]];
  AssertEquals[Null, Catch[AssertMatchN[
    {___, {5.1}, ___}, {{1}, {0}}, Tolerance -> 4.5], "AssertMatchN"]];
 ];
 
-AddTest["testAssertMatchNNonNumericTolerance",
+AddTest[assertMatchNTests, "testAssertMatchNNonNumericTolerance",
  AssertMessage[eMUnitMessages::nonNumericTolerance, 
   Catch[AssertMatchN[{2, 3, 4.}, 5.1, Tolerance -> "string"], "AssertMatchN"]]
 ];
 
-AddTest["testAssertMatchNThrow", 
+AddTest[assertMatchNTests, "testAssertMatchNThrow", 
   AssertEquals[eMUnit`Private`assertException[HoldComplete[
                  AssertMatchN[{1, 3}, 2, Tolerance -> 0.3]], 2], 
    Catch[AssertMatchN[{1, 3}, 2, Tolerance -> 0.3], "AssertMatchN"]];
@@ -412,14 +414,17 @@ AddTest["testAssertMatchNThrow",
 (*Test AssertMessage*)
 
 
-AddTest["testAssertMessageRuns", Module[{mess, i = 0},
+AddSuite[assertTests, assertMessageTests];
+
+
+AddTest[assertMessageTests, "testAssertMessageRuns", Module[{mess, i = 0},
   mess::aMessage = "Message!";
   Catch[AssertMessage[mess::aMessage, i++], "AssertMessage"];
   AssertEquals[1, i];
 ]];
 
 
-AddTest["testAssertNoMessage", Module[{mess, messenger, result},
+AddTest[assertMessageTests, "testAssertNoMessage", Module[{mess, messenger, result},
   result = Catch[AssertNoMessage[1+1]; "noThrow", "AssertMessage"];
   AssertEquals["noThrow", result];
   mess::aMessage = "Message!";
@@ -433,14 +438,14 @@ AddTest["testAssertNoMessage", Module[{mess, messenger, result},
    , result];
 ]];
 
-AddTest["testAssertMessageCorrectMessage", Module[{mess, messenger, result},
+AddTest[assertMessageTests, "testAssertMessageCorrectMessage", Module[{mess, messenger, result},
   mess::aMessage = "Message!";
   messenger := Message[mess::aMessage];
   result = Catch[AssertMessage[mess::aMessage, messenger]; "noThrow", "AssertMessage"];
   AssertEquals["noThrow", result];
 ]];
 
-AddTest["testAssertMessageThrows", Module[{mess, result},
+AddTest[assertMessageTests, "testAssertMessageThrows", Module[{mess, result},
   mess::aMessage = "Message!";
   result = Catch[AssertMessage[mess::aMessage, "noMessage"], "AssertMessage"];
   AssertEquals[eMUnit`Private`assertException[
@@ -450,7 +455,7 @@ AddTest["testAssertMessageThrows", Module[{mess, result},
 ]];
 
 
-AddTest["testAssertMessageQuiet", 
+AddTest[assertMessageTests, "testAssertMessageQuiet", 
   EndSuite[];
   Block[{$MessageList = {}}, 
    Quiet[
@@ -458,7 +463,7 @@ AddTest["testAssertMessageQuiet",
     AssertEquals[{}, $MessageList];
    , eMUnitMessages::suiteNotSet];
 ]];
-AddTest["testAssertMessageNotQuietOther",
+AddTest[assertMessageTests, "testAssertMessageNotQuietOther",
   EndSuite[];
   Block[{$MessageList = {}}, 
    Quiet[
@@ -469,7 +474,7 @@ AddTest["testAssertMessageNotQuietOther",
 ]];
 
 
-AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result},
+AddTest[assertMessageTests, "testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result},
   mess::aMessage = "Message!";
   messenger := Message[mess::aMessage];
   Quiet[
@@ -484,34 +489,43 @@ AddTest["testAssertMessageIndepOfOtherMessages", Module[{mess, messenger, result
 (*Test Begin, List, Add, Delete*)
 
 
-(* ::Subsubsection::Closed:: *)
+AddSuite[frameworkTests, suiteTests];
+
+
+(* ::Subsubsection:: *)
 (*Test AddTest*)
 
 
- AddTest["testAddAndListTests",
-  AddTest["aTest", 1 + 1];
-  AddTest[mytests, "anotherTest", 1 + 2];
-  AssertEquals[{"aTest", "anotherTest"}, ListTests[]];
- ];
+AddSuite[suiteTests, addTestTests];
 
- AddTest["testAddTestDontEvaluateTheTest",
-  Module[{i = 1},
-   AddTest["aTest", Do[i++, {10}]];
-   AssertEquals[1, i];
-  ]];
 
- AddTest["testAddingTwiceOverwrites",
-  AddTest["aTest", 1 + 1];
-  AddTest["aTest", 1 + 2];
-  AssertEquals[{"aTest"}, ListTests[]];
- ];
+AddTest[addTestTests, "testAddAndListTests",
+ AddTest["aTest", 1 + 1];
+ AddTest[mytests, "anotherTest", 1 + 2];
+ AssertEquals[{"aTest", "anotherTest"}, ListTests[]];
+];
+
+AddTest[addTestTests, "testAddTestDontEvaluateTheTest",
+ Module[{i = 1},
+  AddTest["aTest", Do[i++, {10}]];
+  AssertEquals[1, i];
+ ]];
+
+AddTest[addTestTests, "testAddingTwiceOverwrites",
+ AddTest["aTest", 1 + 1];
+ AddTest["aTest", 1 + 2];
+ AssertEquals[{"aTest"}, ListTests[]];
+];
 
 
 (* ::Subsubsection::Closed:: *)
 (*Test Suite workings*)
 
 
-AddTest["testAddSuite",
+AddSuite[suiteTests, suiteWorkingsTests];
+
+
+AddTest[suiteWorkingsTests, "testAddSuite",
  ClearAll[mySubsuite];
  AddSuite[mySubsuite];
  AddTest[mySubsuite, "aTest", 1+1];
@@ -520,9 +534,9 @@ AddTest["testAddSuite",
 ];
 
 
-AddTest["testRunSubSuite", Module[{i = 0},
+AddTest[suiteWorkingsTests, "testRunSubSuite", Module[{i = 0},
   ClearAll[mySubsuite];
-  AddTest["aTest", i++]
+  AddTest["aTest", i++];
   AddSuite[mySubsuite];
   AddTest[mySubsuite, "anotherTest", i+=2];
   AddSuite[mySubsuite, mySubsubsuite];
@@ -532,13 +546,13 @@ AddTest["testRunSubSuite", Module[{i = 0},
 ]];
 
 
-AddTest["testSuiteNotSetMessage",
+AddTest[suiteWorkingsTests, "testSuiteNotSetMessage",
  EndSuite[];
  AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
 ];
 
 
-AddTest["testEndSuiteEmptyStack",
+AddTest[suiteWorkingsTests, "testEndSuiteEmptyStack",
   BeginSuite[mytests];
   Do[EndSuite[];,{5}];
   AssertNoMessage[EndSuite[]];
@@ -577,7 +591,7 @@ runExtract[]
 
 (* ListTests, AddTest, AddSuite, BeginSubsuite, DeleteTest, RunTests (both)  *)
 addRecheckCurrentSuiteTest = Function[{name, expr, result},
- AddTest["testCurrentSuiteRecheck" <> name, Module[{a = "notTouched (just checkin)"},
+ AddTest[suiteWorkingsTests, "testCurrentSuiteRecheck" <> name, Module[{a = "notTouched (just checkin)"},
    EndSuite[];
    AddTest[mytests, "atest", a = expr];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
@@ -613,7 +627,7 @@ addRecheckCurrentSuiteTest @@@ Unevaluated[{
 (*Test BeginSubsuite*)
 
 
-AddTest["testBeginSubsuite",
+AddTest[suiteTests, "testBeginSubsuite",
  ClearAll[mySubsuite];
  BeginSubsuite[mySubsuite];
  AddTest["aTest", 1+1];
@@ -627,7 +641,7 @@ AddTest["testBeginSubsuite",
 (*Test DeleteTest*)
 
 
- AddTest["testDeleteTest",
+ AddTest[suiteTests, "testDeleteTest",
   AddTest["aTest", a = 1];
   AddTest["anotherTest", b = 1];
   DeleteTest["aTest"];
@@ -639,11 +653,17 @@ AddTest["testBeginSubsuite",
 (*Test Run*)
 
 
+AddSuite[frameworkTests, runTests];
+
+
 (* ::Subsubsection::Closed:: *)
 (*Test RunTest*)
 
 
-AddTest["testRunTest",
+AddSuite[runTests, testRunTest];
+
+
+AddTest[testRunTest, "testRunTest",
  Module[{i = 1},
   AddTest["aTest", Do[i++, {10}]];
   AssertEquals[1, i];
@@ -651,7 +671,7 @@ AddTest["testRunTest",
   AssertEquals[11, i];
  ]];
 
-AddTest["testRunTestWithPattern",
+AddTest[testRunTest, "testRunTestWithPattern",
  Module[{i = 0},
    AddTest["aTest", i++]; 
    AddTest["anotherTest", i += 2];
@@ -661,7 +681,7 @@ AddTest["testRunTestWithPattern",
    AssertEquals[5, i];
  ]];
 
-AddTest["testRunTestWithNonmatchingPattern", Module[{result},
+AddTest[testRunTest, "testRunTestWithNonmatchingPattern", Module[{result},
  AssertMessage[eMUnitMessages::nonexistentTest, 
   result = RunTest[__ ~~ "nonmatchingPattern"]
  ];
@@ -671,7 +691,7 @@ AddTest["testRunTestWithNonmatchingPattern", Module[{result},
 ]];
 
 
- AddTest["testRunTestOnSuite",
+ AddTest[testRunTest, "testRunTestOnSuite",
   Module[{a, b, c},
    AddTest["test1", a = 1];
    AddTest["test2", b = 2];
@@ -683,7 +703,7 @@ AddTest["testRunTestWithNonmatchingPattern", Module[{result},
   ]];
 
 
-AddTest["testRunTestOnParentWithStringPattern", Module[{i = 0},
+AddTest[testRunTest, "testRunTestOnParentWithStringPattern", Module[{i = 0},
   ClearAll[mySubsuite];
   AddSuite[mySubsuite];
   AddTest[mySubsuite, "aTestNotExistingInParent", i++];
@@ -699,14 +719,17 @@ AddTest["testRunTestOnParentWithStringPattern", Module[{i = 0},
 (*Test Set Up*)
 
 
-AddTest["testSetUp",
+AddSuite[runTests, testSetUp];
+
+
+AddTest[testSetUp, "testSetUp",
  mytests["isSetUp"] = False;
  AddTest["Set Up", mytests["isSetUp"] = True];
  mytests["Set Up"];
  AssertTrue[mytests["isSetUp"]];
 ];
 
-AddTest["testRunTestRunsSetUp",
+AddTest[testSetUp, "testRunTestRunsSetUp",
  mytests["isSetUp"] = False;
  AddTest["Set Up", mytests["isSetUp"] = True];
  AddTest["emptyTest", Null];
@@ -719,7 +742,10 @@ AddTest["testRunTestRunsSetUp",
 (*Test Tear Down*)
 
 
- AddTest["testTearDown",
+AddSuite[runTests, testTearDown];
+
+
+ AddTest[testTearDown, "testTearDown",
   Module[{isStillSetUp},
    mytests["Set Up"];
    isStillSetUp = True;
@@ -728,7 +754,7 @@ AddTest["testRunTestRunsSetUp",
    AssertTrue[!ValueQ[isStillSetUp]];
   ]];
 
- AddTest["testRunTestRunsTearDown",
+ AddTest[testTearDown, "testRunTestRunsTearDown",
   Module[{isStillSetUp},
    AddTest["Tear Down", Clear[isStillSetUp]];
    AddTest["setsUp", isStillSetUp = True];
@@ -741,18 +767,21 @@ AddTest["testRunTestRunsSetUp",
 (*Test formatTestResult*)
 
 
-AddTest["testFormatSingleSuccessfulTestResult", 
+AddSuite[runTests, testFormatTestResults];
+
+
+AddTest[testFormatTestResults, "testFormatSingleSuccessfulTestResult", 
   AddTest["aTest", AssertEquals[1, 1]];
   AssertMatch[Column[{_Graphics, "1 run in 0. s, 0 failed"}], RunTest["aTest"]];
 ];
 
-AddTest["testFormatTwoSuccessfulTestResult", 
+AddTest[testFormatTestResults, "testFormatTwoSuccessfulTestResult", 
   AddTest["aTest", AssertEquals[1, 1]];
   AddTest["anotherTest", AssertEquals[1, 1]];
   AssertMatch[Column[{_Graphics, "2 run in 0. s, 0 failed"}], RunTest[]]
 ];
 
-AddTest["testFormatSingleFailedTestResult", 
+AddTest[testFormatTestResults, "testFormatSingleFailedTestResult", 
   AddTest["aTest", AssertTrue[False]];
   AssertMatch[
    Column[{_Graphics, 
@@ -761,7 +790,7 @@ AddTest["testFormatSingleFailedTestResult",
    RunTest[]];
 ];
 
-AddTest["testFormatOneEachTestResult", 
+AddTest[testFormatTestResults, "testFormatOneEachTestResult", 
  AddTest["aTest", AssertEquals[1, 1]];
  AddTest["anotherTest", AssertEquals[1, -1]];
  AssertMatch[
@@ -772,7 +801,7 @@ AddTest["testFormatOneEachTestResult",
 ];
 
 
-AddTest["testFormatAssertMessageExpectedMessage", 
+AddTest[testFormatTestResults, "testFormatAssertMessageExpectedMessage", 
  AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
  AssertMatch[
    Column[{_Graphics, 
@@ -780,7 +809,7 @@ AddTest["testFormatAssertMessageExpectedMessage",
       "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
    RunTest[]];
 ];
-AddTest["testFormatAssertNoMessage", 
+AddTest[testFormatTestResults, "testFormatAssertNoMessage", 
  Module[{formattedResult},
   mess::aMessage = "Message!";
   AddTest["aTest", AssertNoMessage[Message[mess::aMessage]]];
@@ -794,7 +823,7 @@ AddTest["testFormatAssertNoMessage",
 ]];
 
 
-AddTest["testFormatTestResultSubsuites",
+AddTest[testFormatTestResults, "testFormatTestResultSubsuites",
  Module[{formattedResult, level1, level2, level3, i = 0},
   BeginSuite[level1];
   AddTest["test1.1", i++];
@@ -818,7 +847,7 @@ AddTest["testFormatTestResultSubsuites",
 ]];
 
 
-AddTest["testFormatHierarchicalTestResultSubsuites",
+AddTest[testFormatTestResults, "testFormatHierarchicalTestResultSubsuites",
  Module[{formattedResult, level1, level2, level3, i = 0},
   BeginSuite[level1];
     AddTest["test1.1", i++];
@@ -848,8 +877,5 @@ AddTest["testFormatHierarchicalTestResultSubsuites",
 ]];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Tail*)
-
-
-EndSuite[];
