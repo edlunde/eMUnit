@@ -82,12 +82,12 @@ ClearAll[frameworkTests];
 
 
 AddTest[frameworkTests, "Set Up", 
- ClearAll[mytests, anotherSuite]; 
+ ClearAll[mytests, anotherSuite, aThirdSuite]; 
  BeginSuite[mytests];];
  
 AddTest[frameworkTests, "Tear Down", 
  EndSuite[]; 
- ClearAll[mytests, anotherSuite]];
+ ClearAll[mytests, anotherSuite, aThirdSuite]];
 
 
 (* ::Subsection:: *)
@@ -492,7 +492,7 @@ AddTest[assertMessageTests, "testAssertMessageIndepOfOtherMessages", Module[{mes
 AddSuite[frameworkTests, suiteTests];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Test AddTest*)
 
 
@@ -526,28 +526,28 @@ AddSuite[suiteTests, suiteWorkingsTests];
 
 
 AddTest[suiteWorkingsTests, "testAddSuite",
- ClearAll[mySubsuite];
- AddSuite[mySubsuite];
- AddTest[mySubsuite, "aTest", 1+1];
- AssertEquals[{eMUnit`PackageTests`mySubsuite}, ListTests[]];
+ AddSuite[anotherSuite];
+ AddTest[anotherSuite, "aTest", 1+1];
+ AssertEquals[{eMUnit`PackageTests`anotherSuite}, ListTests[]];
  AssertEquals[{"aTest"}, ListTests[ListTests[mytests][[1]]]]
 ];
 
 
 AddTest[suiteWorkingsTests, "testRunSubSuite", Module[{i = 0},
-  ClearAll[mySubsuite];
   AddTest["aTest", i++];
-  AddSuite[mySubsuite];
-  AddTest[mySubsuite, "anotherTest", i+=2];
-  AddSuite[mySubsuite, mySubsubsuite];
-  AddTest[mySubsubsuite, "aThirdTest", i+=3];
+  AddSuite[anotherSuite];
+  AddTest[anotherSuite, "anotherTest", i+=2];
+  AddSuite[anotherSuite, aThirdSuite];
+  AddTest[aThirdSuite, "aThirdTest", i+=3];
   RunTest[];
   AssertEquals[6, i]
 ]];
 
 
 AddTest[suiteWorkingsTests, "testSuiteNotSetMessage",
+Print[eMUnit`Private`suiteStack];
  EndSuite[];
+Print[eMUnit`Private`suiteStack];
  AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
 ];
 
@@ -737,30 +737,90 @@ AddTest[testSetUp, "testRunTestRunsSetUp",
  AssertTrue[mytests["isSetUp"]];
 ];
 
+AddTest[testSetUp, "Hierarchical suites runs Set Up",
+ mytests["isSetUp"] = False;
+ AddSuite[mytests, anotherSuite];
+ AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
+ AddTest[anotherSuite, "emptyTest", Null];
+ RunTest[anotherSuite];
+ AssertTrue[mytests["isSetUp"]];
+];
 
-(* ::Subsubsection::Closed:: *)
+AddTest[testSetUp, "Hierarchical suites runs Set Up 2 levels down",
+ mytests["isSetUp"] = False;
+ AddSuite[mytests, anotherSuite];
+ AddSuite[anotherSuite, thirdSuite];
+ AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
+ AddTest[thirdSuite, "emptyTest", Null];
+ RunTest[thirdSuite];
+ AssertTrue[mytests["isSetUp"]];
+];
+
+
+(* ::Subsubsection:: *)
 (*Test Tear Down*)
 
 
 AddSuite[runTests, testTearDown];
 
 
- AddTest[testTearDown, "testTearDown",
-  Module[{isStillSetUp},
-   mytests["Set Up"];
-   isStillSetUp = True;
-   AddTest["Tear Down", Clear[isStillSetUp]];
-   mytests["Tear Down"];
-   AssertTrue[!ValueQ[isStillSetUp]];
-  ]];
+AddTest[testTearDown, "testTearDown",
+ Module[{isStillSetUp},
+  isStillSetUp = True;
+  AddTest["Tear Down", Clear[isStillSetUp]];
+  mytests["Tear Down"];
+  AssertTrue[!ValueQ[isStillSetUp]];
+ ]];
 
- AddTest[testTearDown, "testRunTestRunsTearDown",
-  Module[{isStillSetUp},
-   AddTest["Tear Down", Clear[isStillSetUp]];
-   AddTest["setsUp", isStillSetUp = True];
-   RunTest["setsUp"];
-   AssertTrue[!ValueQ[isStillSetUp]];
-  ]];
+
+AddTest[testTearDown, "testRunTestRunsTearDown",
+ Module[{isStillSetUp},
+  AddTest["Tear Down", Clear[isStillSetUp]];
+  AddTest["setsUp", isStillSetUp = True];
+  RunTest["setsUp"];
+  AssertTrue[!ValueQ[isStillSetUp]];
+ ]];
+
+
+AddTest[testTearDown, "testRunTestRunsTearDownEvenAfterFailedTest",
+ Module[{isStillSetUp},
+  AddTest["Tear Down", Clear[isStillSetUp]];
+  AddTest["setsUp", isStillSetUp = True; AssertTrue[False]];
+  RunTest["setsUp"];
+  AssertTrue[!ValueQ[isStillSetUp]];
+ ]];
+
+
+AddTest[testTearDown, "Hierarchical suites runs Tear Down",
+ Module[{isStillSetUp},
+  AddSuite[mytests, anotherSuite];
+  AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+  AddTest[anotherSuite, "setsUp", isStillSetUp = True];
+  RunTest[anotherSuite];
+  AssertTrue[!ValueQ[isStillSetUp]];
+ ]];
+
+
+AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down",
+ Module[{isStillSetUp},
+  AddSuite[mytests, anotherSuite];
+  AddSuite[anotherSuite, thirdSuite];
+  AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+  AddTest[thirdSuite, "setsUp", isStillSetUp = True];
+  RunTest[thirdSuite];
+  AssertTrue[!ValueQ[isStillSetUp]];
+ ]];
+
+
+AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down after failed test",
+ Module[{isStillSetUp},
+  AddSuite[mytests, anotherSuite];
+  AddSuite[anotherSuite, thirdSuite];
+  AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+  AddTest[thirdSuite, "setsUp", isStillSetUp = True; AssertTrue[False]];
+  RunTest[thirdSuite];
+  AssertTrue[!ValueQ[isStillSetUp]];
+ ]];
 
 
 (* ::Subsubsection::Closed:: *)

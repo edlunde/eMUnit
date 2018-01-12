@@ -228,12 +228,14 @@ AddTest[suite_Symbol, name_, test_] := (
   updateTestList[suite, name];
   name
 )
+(* suite[UnitTests] contains unit tests, suite also has internal "tests" that 
+   shouldn't be visible to ListTest etc. *)
 updateTestList[suite_Symbol, name_] := (
   If[!ListQ@suite[UnitTests], suite[UnitTests] = {}];
   If[shouldBeAdded[suite, name], AppendTo[suite[UnitTests], name]]
 )
 shouldBeAdded[suite_Symbol, name_] := 
- Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down"}], name]
+ Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down", "Parent Suite"}], name]
 
 
 DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
@@ -248,7 +250,8 @@ DeleteTest[suite_Symbol, name_] := (suite[name] =.;
 
 AddSuite[subsuite_Symbol] := runIfSuiteSet[AddSuite[currentSuite[], subsuite]]
 AddSuite[mainSuite_Symbol, subsuite_Symbol] := 
-   AddTest[mainSuite, subsuite, runTest[subsuite]]
+  (AddTest[subsuite, "Parent Suite", mainSuite];
+   AddTest[mainSuite, subsuite, runTest[subsuite]])
 
 BeginSubsuite[subsuite_Symbol] := 
   runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
@@ -284,11 +287,21 @@ isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
 runTest[suite_Symbol] := runTest[suite, #] & /@ ListTests[suite]
 runTest[suite_Symbol, name_] := Module[{result, time},
   time = First@Timing[
-   suite["Set Up"];
+   runSetUp[suite];
    result = Catch[suite[name], exceptionName_?isAssertExceptionName];
-   suite["Tear Down"]];
+   runTearDown[suite]];
   createTestResult[suite, name, result, time]
  ]
+
+
+runSetUp[suite_Symbol] :=
+  {If[isSubsuite[suite], runSetUp[suite["Parent Suite"]]], 
+   suite["Set Up"]}
+runTearDown[suite_Symbol] :=
+  {suite["Tear Down"], 
+   If[isSubsuite[suite], runTearDown[suite["Parent Suite"]]]}
+  
+isSubsuite[suite_Symbol] := Head[suite["Parent Suite"]] === Symbol
 
 
 createTestResult[suite_Symbol, name_, result_, time_?NumericQ] := 
@@ -304,7 +317,7 @@ getFailureExpressionString[failure_?isFailure] :=
  getAssertExceptionExprString[getResult[failure]]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Format test results*)
 
 
