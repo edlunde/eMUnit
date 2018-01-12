@@ -82,11 +82,9 @@ ClearAll[frameworkTests];
 
 
 AddTest[frameworkTests, "Set Up", 
- ClearAll[mytests, anotherSuite, aThirdSuite]; 
- BeginSuite[mytests];];
+ ClearAll[mytests, anotherSuite, aThirdSuite]];
  
-AddTest[frameworkTests, "Tear Down", 
- EndSuite[]; 
+AddTest[frameworkTests, "Tear Down",  
  ClearAll[mytests, anotherSuite, aThirdSuite]];
 
 
@@ -456,7 +454,6 @@ AddTest[assertMessageTests, "testAssertMessageThrows", Module[{mess, result},
 
 
 AddTest[assertMessageTests, "testAssertMessageQuiet", 
-  EndSuite[];
   Block[{$MessageList = {}}, 
    Quiet[
     Catch[AssertMessage[eMUnitMessages::suiteNotSet, ListTests[]], "AssertMessage"];
@@ -464,7 +461,6 @@ AddTest[assertMessageTests, "testAssertMessageQuiet",
    , eMUnitMessages::suiteNotSet];
 ]];
 AddTest[assertMessageTests, "testAssertMessageNotQuietOther",
-  EndSuite[];
   Block[{$MessageList = {}}, 
    Quiet[
     Catch[AssertMessage[eMUnitMessages::nonexistentTest, ListTests[]]
@@ -500,21 +496,21 @@ AddSuite[suiteTests, addTestTests];
 
 
 AddTest[addTestTests, "testAddAndListTests",
- AddTest["aTest", 1 + 1];
+ AddTest[mytests, "aTest", 1 + 1];
  AddTest[mytests, "anotherTest", 1 + 2];
- AssertEquals[{"aTest", "anotherTest"}, ListTests[]];
+ AssertEquals[{"aTest", "anotherTest"}, ListTests[mytests]];
 ];
 
 AddTest[addTestTests, "testAddTestDontEvaluateTheTest",
  Module[{i = 1},
-  AddTest["aTest", Do[i++, {10}]];
+  AddTest[mytests, "aTest", Do[i++, {10}]];
   AssertEquals[1, i];
  ]];
 
 AddTest[addTestTests, "testAddingTwiceOverwrites",
- AddTest["aTest", 1 + 1];
- AddTest["aTest", 1 + 2];
- AssertEquals[{"aTest"}, ListTests[]];
+ AddTest[mytests, "aTest", 1 + 1];
+ AddTest[mytests, "aTest", 1 + 2];
+ AssertEquals[{"aTest"}, ListTests[mytests]];
 ];
 
 
@@ -526,28 +522,25 @@ AddSuite[suiteTests, suiteWorkingsTests];
 
 
 AddTest[suiteWorkingsTests, "testAddSuite",
- AddSuite[anotherSuite];
+ AddSuite[mytests, anotherSuite];
  AddTest[anotherSuite, "aTest", 1+1];
- AssertEquals[{eMUnit`PackageTests`anotherSuite}, ListTests[]];
+ AssertEquals[{eMUnit`PackageTests`anotherSuite}, ListTests[mytests]];
  AssertEquals[{"aTest"}, ListTests[ListTests[mytests][[1]]]]
 ];
 
 
 AddTest[suiteWorkingsTests, "testRunSubSuite", Module[{i = 0},
-  AddTest["aTest", i++];
-  AddSuite[anotherSuite];
+  AddTest[mytests, "aTest", i++];
+  AddSuite[mytests, anotherSuite];
   AddTest[anotherSuite, "anotherTest", i+=2];
   AddSuite[anotherSuite, aThirdSuite];
   AddTest[aThirdSuite, "aThirdTest", i+=3];
-  RunTest[];
+  RunTest[mytests];
   AssertEquals[6, i]
 ]];
 
 
 AddTest[suiteWorkingsTests, "testSuiteNotSetMessage",
-Print[eMUnit`Private`suiteStack];
- EndSuite[];
-Print[eMUnit`Private`suiteStack];
  AssertMessage[eMUnitMessages::suiteNotSet, AddTest["testWithoutSuite", 1+1]]
 ];
 
@@ -592,7 +585,6 @@ runExtract[]
 (* ListTests, AddTest, AddSuite, BeginSubsuite, DeleteTest, RunTests (both)  *)
 addRecheckCurrentSuiteTest = Function[{name, expr, result},
  AddTest[suiteWorkingsTests, "testCurrentSuiteRecheck" <> name, Module[{a = "notTouched (just checkin)"},
-   EndSuite[];
    AddTest[mytests, "atest", a = expr];
    AssertMessage[eMUnitMessages::suiteNotSet, RunTest[mytests]];
    AssertEquals[Null, Unevaluated@a];(*holdform*)
@@ -628,11 +620,12 @@ addRecheckCurrentSuiteTest @@@ Unevaluated[{
 
 
 AddTest[suiteTests, "testBeginSubsuite",
- ClearAll[mySubsuite];
- BeginSubsuite[mySubsuite];
- AddTest["aTest", 1+1];
+ BeginSuite[mytests];
+  BeginSubsuite[anotherSuite];
+   AddTest["aTest", 1+1];
+  EndSuite[];
  EndSuite[];
- AssertEquals[{eMUnit`PackageTests`mySubsuite}, ListTests[]];
+ AssertEquals[{eMUnit`PackageTests`anotherSuite}, ListTests[mytests]];
  AssertEquals[{"aTest"}, ListTests[ListTests[mytests][[1]]]]
 ];
 
@@ -642,10 +635,10 @@ AddTest[suiteTests, "testBeginSubsuite",
 
 
  AddTest[suiteTests, "testDeleteTest",
-  AddTest["aTest", a = 1];
-  AddTest["anotherTest", b = 1];
-  DeleteTest["aTest"];
-  AssertEquals[{"anotherTest"}, ListTests[]];
+  AddTest[mytests, "aTest", a = 1];
+  AddTest[mytests, "anotherTest", b = 1];
+  DeleteTest[mytests, "aTest"];
+  AssertEquals[{"anotherTest"}, ListTests[mytests]];
  ];
 
 
@@ -665,38 +658,38 @@ AddSuite[runTests, testRunTest];
 
 AddTest[testRunTest, "testRunTest",
  Module[{i = 1},
-  AddTest["aTest", Do[i++, {10}]];
+  AddTest[mytests, "aTest", Do[i++, {10}]];
   AssertEquals[1, i];
-  RunTest["aTest"];
+  RunTest[mytests, "aTest"];
   AssertEquals[11, i];
  ]];
 
 AddTest[testRunTest, "testRunTestWithPattern",
  Module[{i = 0},
-   AddTest["aTest", i++]; 
-   AddTest["anotherTest", i += 2];
-   RunTest["an" ~~ __ ~~ "Test"];
+   AddTest[mytests, "aTest", i++]; 
+   AddTest[mytests, "anotherTest", i += 2];
+   RunTest[mytests, "an" ~~ __ ~~ "Test"];
    AssertEquals[2, i];
-   RunTest["a" ~~ ___ ~~ "Test"];
+   RunTest[mytests, "a" ~~ ___ ~~ "Test"];
    AssertEquals[5, i];
  ]];
 
 AddTest[testRunTest, "testRunTestWithNonmatchingPattern", Module[{result},
  AssertMessage[eMUnitMessages::nonexistentTest, 
-  result = RunTest[__ ~~ "nonmatchingPattern"]
+  result = RunTest[mytests, __ ~~ "nonmatchingPattern"]
  ];
  AssertEquals[
-  Unevaluated@RunTest[eMUnit`PackageTests`mytests,__~~"nonmatchingPattern"], 
+  Unevaluated@RunTest[mytests, __~~"nonmatchingPattern"], 
   result];
 ]];
 
 
  AddTest[testRunTest, "testRunTestOnSuite",
   Module[{a, b, c},
-   AddTest["test1", a = 1];
-   AddTest["test2", b = 2];
-   AddTest["test3", c = a + b];
-   RunTest[];
+   AddTest[mytests, "test1", a = 1];
+   AddTest[mytests, "test2", b = 2];
+   AddTest[mytests, "test3", c = a + b];
+   RunTest[mytests];
    AssertEquals[1, a];
    AssertEquals[2, b];
    AssertEquals[3, c];
@@ -704,13 +697,12 @@ AddTest[testRunTest, "testRunTestWithNonmatchingPattern", Module[{result},
 
 
 AddTest[testRunTest, "testRunTestOnParentWithStringPattern", Module[{i = 0},
-  ClearAll[mySubsuite];
-  AddSuite[mySubsuite];
-  AddTest[mySubsuite, "aTestNotExistingInParent", i++];
+  AddSuite[mytests, anotherSuite];
+  AddTest[anotherSuite, "aTestNotExistingInParent", i++];
   AssertMessage[eMUnitMessages::nonexistentTest, 
     RunTest[mytests, __~~"NotExistingInParent"]];
   AssertEquals[0, i];
-  RunTest[mySubsuite, __~~"NotExistingInParent"]
+  RunTest[anotherSuite, __~~"NotExistingInParent"];
   AssertEquals[1, i];
 ]];
 
@@ -724,16 +716,16 @@ AddSuite[runTests, testSetUp];
 
 AddTest[testSetUp, "testSetUp",
  mytests["isSetUp"] = False;
- AddTest["Set Up", mytests["isSetUp"] = True];
+ AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
  mytests["Set Up"];
  AssertTrue[mytests["isSetUp"]];
 ];
 
 AddTest[testSetUp, "testRunTestRunsSetUp",
  mytests["isSetUp"] = False;
- AddTest["Set Up", mytests["isSetUp"] = True];
- AddTest["emptyTest", Null];
- RunTest[];
+ AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
+ AddTest[mytests, "emptyTest", Null];
+ RunTest[mytests];
  AssertTrue[mytests["isSetUp"]];
 ];
 
@@ -749,15 +741,15 @@ AddTest[testSetUp, "Hierarchical suites runs Set Up",
 AddTest[testSetUp, "Hierarchical suites runs Set Up 2 levels down",
  mytests["isSetUp"] = False;
  AddSuite[mytests, anotherSuite];
- AddSuite[anotherSuite, thirdSuite];
+ AddSuite[anotherSuite, aThirdSuite];
  AddTest[mytests, "Set Up", mytests["isSetUp"] = True];
- AddTest[thirdSuite, "emptyTest", Null];
- RunTest[thirdSuite];
+ AddTest[aThirdSuite, "emptyTest", Null];
+ RunTest[aThirdSuite];
  AssertTrue[mytests["isSetUp"]];
 ];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Test Tear Down*)
 
 
@@ -767,7 +759,7 @@ AddSuite[runTests, testTearDown];
 AddTest[testTearDown, "testTearDown",
  Module[{isStillSetUp},
   isStillSetUp = True;
-  AddTest["Tear Down", Clear[isStillSetUp]];
+  AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
   mytests["Tear Down"];
   AssertTrue[!ValueQ[isStillSetUp]];
  ]];
@@ -775,18 +767,18 @@ AddTest[testTearDown, "testTearDown",
 
 AddTest[testTearDown, "testRunTestRunsTearDown",
  Module[{isStillSetUp},
-  AddTest["Tear Down", Clear[isStillSetUp]];
-  AddTest["setsUp", isStillSetUp = True];
-  RunTest["setsUp"];
+  AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+  AddTest[mytests, "setsUp", isStillSetUp = True];
+  RunTest[mytests, "setsUp"];
   AssertTrue[!ValueQ[isStillSetUp]];
  ]];
 
 
 AddTest[testTearDown, "testRunTestRunsTearDownEvenAfterFailedTest",
  Module[{isStillSetUp},
-  AddTest["Tear Down", Clear[isStillSetUp]];
-  AddTest["setsUp", isStillSetUp = True; AssertTrue[False]];
-  RunTest["setsUp"];
+  AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
+  AddTest[mytests, "setsUp", isStillSetUp = True; AssertTrue[False]];
+  RunTest[mytests, "setsUp"];
   AssertTrue[!ValueQ[isStillSetUp]];
  ]];
 
@@ -804,10 +796,10 @@ AddTest[testTearDown, "Hierarchical suites runs Tear Down",
 AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down",
  Module[{isStillSetUp},
   AddSuite[mytests, anotherSuite];
-  AddSuite[anotherSuite, thirdSuite];
+  AddSuite[anotherSuite, aThirdSuite];
   AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
-  AddTest[thirdSuite, "setsUp", isStillSetUp = True];
-  RunTest[thirdSuite];
+  AddTest[aThirdSuite, "setsUp", isStillSetUp = True];
+  RunTest[aThirdSuite];
   AssertTrue[!ValueQ[isStillSetUp]];
  ]];
 
@@ -815,10 +807,10 @@ AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down",
 AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down after failed test",
  Module[{isStillSetUp},
   AddSuite[mytests, anotherSuite];
-  AddSuite[anotherSuite, thirdSuite];
+  AddSuite[anotherSuite, aThirdSuite];
   AddTest[mytests, "Tear Down", Clear[isStillSetUp]];
-  AddTest[thirdSuite, "setsUp", isStillSetUp = True; AssertTrue[False]];
-  RunTest[thirdSuite];
+  AddTest[aThirdSuite, "setsUp", isStillSetUp = True; AssertTrue[False]];
+  RunTest[aThirdSuite];
   AssertTrue[!ValueQ[isStillSetUp]];
  ]];
 
@@ -831,49 +823,50 @@ AddSuite[runTests, testFormatTestResults];
 
 
 AddTest[testFormatTestResults, "testFormatSingleSuccessfulTestResult", 
-  AddTest["aTest", AssertEquals[1, 1]];
-  AssertMatch[Column[{_Graphics, "1 run in 0. s, 0 failed"}], RunTest["aTest"]];
+  AddTest[mytests, "aTest", AssertEquals[1, 1]];
+  AssertMatch[Column[{_Graphics, "1 run in 0. s, 0 failed"}], 
+   RunTest[mytests, "aTest"]];
 ];
 
 AddTest[testFormatTestResults, "testFormatTwoSuccessfulTestResult", 
-  AddTest["aTest", AssertEquals[1, 1]];
-  AddTest["anotherTest", AssertEquals[1, 1]];
-  AssertMatch[Column[{_Graphics, "2 run in 0. s, 0 failed"}], RunTest[]]
+  AddTest[mytests, "aTest", AssertEquals[1, 1]];
+  AddTest[mytests, "anotherTest", AssertEquals[1, 1]];
+  AssertMatch[Column[{_Graphics, "2 run in 0. s, 0 failed"}], RunTest[mytests]]
 ];
 
 AddTest[testFormatTestResults, "testFormatSingleFailedTestResult", 
-  AddTest["aTest", AssertTrue[False]];
+  AddTest[mytests, "aTest", AssertTrue[False]];
   AssertMatch[
    Column[{_Graphics, 
     "1 run in 0. s, 1 failed", 
     "aTest - Failed AssertTrue[False], gave False"}], 
-   RunTest[]];
+   RunTest[mytests]];
 ];
 
 AddTest[testFormatTestResults, "testFormatOneEachTestResult", 
- AddTest["aTest", AssertEquals[1, 1]];
- AddTest["anotherTest", AssertEquals[1, -1]];
+ AddTest[mytests, "aTest", AssertEquals[1, 1]];
+ AddTest[mytests, "anotherTest", AssertEquals[1, -1]];
  AssertMatch[
   Column[{_Graphics, 
     "2 run in 0. s, 1 failed", 
     "anotherTest - Failed AssertEquals[1, -1], gave -1"}], 
-  RunTest[]];
+  RunTest[mytests]];
 ];
 
 
 AddTest[testFormatTestResults, "testFormatAssertMessageExpectedMessage", 
- AddTest["aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
+ AddTest[mytests, "aTest", AssertMessage[Drop::drop, Drop[{1}, 1]]];
  AssertMatch[
    Column[{_Graphics, 
       "1 run in 0. s, 1 failed", 
       "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
-   RunTest[]];
+   RunTest[mytests]];
 ];
 AddTest[testFormatTestResults, "testFormatAssertNoMessage", 
  Module[{formattedResult},
   mess::aMessage = "Message!";
-  AddTest["aTest", AssertNoMessage[Message[mess::aMessage]]];
-  Quiet[formattedResult = RunTest[], mess::aMessage];
+  AddTest[mytests, "aTest", AssertNoMessage[Message[mess::aMessage]]];
+  Quiet[formattedResult = RunTest[mytests], mess::aMessage];
   AssertMatch[
    Column[{_Graphics, 
       "1 run in 0. s, 1 failed", 
