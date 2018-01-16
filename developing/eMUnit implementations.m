@@ -214,7 +214,7 @@ eMUnitMessages::suiteNotSet = "No suite set with BeginSuite[].";
 
 
 ListTests[] := runIfSuiteSet[ListTests[currentSuite[]]]
-ListTests[suite_Symbol] := suite[UnitTests]
+ListTests[suite_Symbol] := suite["Unit Tests"]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -228,19 +228,20 @@ AddTest[suite_Symbol, name_, test_] := (
   updateTestList[suite, name];
   name
 )
-(* suite[UnitTests] contains unit tests, suite also has internal "tests" that 
+(* suite["Unit Tests"] contains unit tests, suite also has internal "tests" that 
    shouldn't be visible to ListTest etc. *)
 updateTestList[suite_Symbol, name_] := (
-  If[!ListQ@suite[UnitTests], suite[UnitTests] = {}];
-  If[shouldBeAdded[suite, name], AppendTo[suite[UnitTests], name]]
+  If[!ListQ@suite["Unit Tests"], suite["Unit Tests"] = {}];
+  If[shouldBeAdded[suite, name], AppendTo[suite["Unit Tests"], name]]
 )
 shouldBeAdded[suite_Symbol, name_] := 
- Not@MemberQ[Join[suite[UnitTests], {"Set Up", "Tear Down", "Parent Suite"}], name]
+ Not@MemberQ[
+   Join[suite["Unit Tests"], {"Unit Tests", "Set Up", "Tear Down", "Parent Suite"}], name]
 
 
 DeleteTest[name_] := runIfSuiteSet[DeleteTest[currentSuite[], name]]
 DeleteTest[suite_Symbol, name_] := (suite[name] =.; 
-  suite[UnitTests] = suite[UnitTests] /. name -> Sequence[];
+  suite["Unit Tests"] = suite["Unit Tests"] /. name -> Sequence[];
   name)
 
 
