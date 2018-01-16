@@ -429,14 +429,14 @@ AddTest[assertMatchNTests, "testAssertMatchNThrow",
 AddSuite[assertTests, assertMessageTests];
 
 
-AddTest[assertMessageTests, "testAssertMessageRuns", Module[{mess, i = 0},
+AddTest[assertMessageTests, "Runs only once", Module[{mess, i = 0},
   mess::aMessage = "Message!";
   Catch[AssertMessage[mess::aMessage, i++], "AssertMessage"];
   AssertEquals[1, i];
 ]];
 
 
-AddTest[assertMessageTests, "testAssertNoMessage", Module[{mess, messenger, result},
+AddTest[assertMessageTests, "AssertNoMessage", Module[{mess, messenger, result},
   result = Catch[AssertNoMessage[1+1]; "noThrow", "AssertMessage"];
   AssertEquals["noThrow", result];
   mess::aMessage = "Message!";
@@ -450,12 +450,14 @@ AddTest[assertMessageTests, "testAssertNoMessage", Module[{mess, messenger, resu
    , result];
 ]];
 
-AddTest[assertMessageTests, "testAssertMessageCorrectMessage", Module[{mess, messenger, result},
+
+AddTest[assertMessageTests, "Check correct message", Module[{mess, messenger, result},
   mess::aMessage = "Message!";
   messenger := Message[mess::aMessage];
   result = Catch[AssertMessage[mess::aMessage, messenger]; "noThrow", "AssertMessage"];
   AssertEquals["noThrow", result];
 ]];
+
 
 AddTest[assertMessageTests, "testAssertMessageThrows", Module[{mess, result},
   mess::aMessage = "Message!";

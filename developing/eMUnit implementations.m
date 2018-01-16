@@ -170,10 +170,10 @@ AssertMessage[message_MessageName, expr_] :=
   assertMessage[{message}, expr, AssertMessage[message, expr]]
 
 assertMessage[expectedMessages : {___MessageName}, expr_, originalCall_] := 
-Module[{onlyExpectedMessagesQ, uncaughtMessages},
- {onlyExpectedMessagesQ, uncaughtMessages} = 
+ Module[{onlyExpectedMessagesQ, uncaughtMessages},
+  {onlyExpectedMessagesQ, uncaughtMessages} = 
         quietEvaluateAndCheckMessages[expectedMessages, expr];
- If[onlyExpectedMessagesQ, Null,
+  If[onlyExpectedMessagesQ, Null,
     passOnMessages[uncaughtMessages];
     throwAssertException["AssertMessage", originalCall, uncaughtMessages]]
 ]
