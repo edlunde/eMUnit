@@ -253,6 +253,9 @@ AddSuite[mainSuite_Symbol, subsuite_Symbol] :=
   (AddTest[subsuite, "Parent Suite", mainSuite];
    AddTest[mainSuite, subsuite, runTest[subsuite]])
 
+getParentSuite[suite_?isSubsuite] := suite["Parent Suite"]
+isSubsuite[suite_Symbol] := Head[suite["Parent Suite"]] === Symbol
+
 BeginSubsuite[subsuite_Symbol] := 
   runIfSuiteSet[AddSuite[subsuite]; BeginSuite[subsuite]]
 
@@ -295,18 +298,18 @@ runTest[suite_Symbol, name_] := Module[{result, time},
 
 
 runSetUp[suite_Symbol] :=
-  {If[isSubsuite[suite], runSetUp[suite["Parent Suite"]]], 
+  {If[isSubsuite[suite], runSetUp[getParentSuite[suite]]], 
    suite["Set Up"]}
 runTearDown[suite_Symbol] :=
   {suite["Tear Down"], 
-   If[isSubsuite[suite], runTearDown[suite["Parent Suite"]]]}
+   If[isSubsuite[suite], runTearDown[getParentSuite[suite]]]}
   
-isSubsuite[suite_Symbol] := Head[suite["Parent Suite"]] === Symbol
+
 
 
 createTestResult[suite_Symbol, name_, result_, time_?NumericQ] := 
  testResult[suite, name, result, time]
-(*getSuite[result_testResult] := result[[1]]*)
+getSuite[result_testResult] := result[[1]]
 getTest[result_testResult] := result[[2]]
 getResult[result_testResult] := result[[3]]
 getTime[result_testResult] := result[[4]]
@@ -369,8 +372,15 @@ formatSummaryString[nResults_Integer, time_?NumericQ, nFailures_Integer] :=
   ToString[nResults] <> " run in " <> ToString@Round[time, 0.01] <> " s, " <> 
    ToString[nFailures] <> " failed"
 formatFailureString[failure_testResult] := 
-  getTest[failure] <> " - Failed " <> getFailureExpressionString[failure] <>  
-    ", gave " <> ToString[getFailureResult[failure], InputForm]
+  formatSuiteString@getSuite[failure] <> 
+   " " <> getTest[failure] <> " - Failed " <> 
+   getFailureExpressionString[failure] <>  
+   ", gave " <> ToString[getFailureResult[failure], InputForm]
+   
+(* Use SymbolName to get rid of any contexts *)
+formatSuiteString[suite_?isSubsuite] := 
+ formatSuiteString@getParentSuite[suite] <> " " <> SymbolName[suite]
+formatSuiteString[suite_Symbol] := SymbolName[suite]
 
 
 formatHierarchical[result_?isNotSubsuiteResultQ, _String] :=

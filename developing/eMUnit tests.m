@@ -62,7 +62,7 @@ Module[{result, f, i = 0},
 ]]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Start of framework*)
 
 
@@ -815,7 +815,7 @@ AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down after fa
  ]];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test formatTestResult*)
 
 
@@ -839,7 +839,7 @@ AddTest[testFormatTestResults, "testFormatSingleFailedTestResult",
   AssertMatch[
    Column[{_Graphics, 
     "1 run in 0. s, 1 failed", 
-    "aTest - Failed AssertTrue[False], gave False"}], 
+    "mytests aTest - Failed AssertTrue[False], gave False"}], 
    RunTest[mytests]];
 ];
 
@@ -849,7 +849,7 @@ AddTest[testFormatTestResults, "testFormatOneEachTestResult",
  AssertMatch[
   Column[{_Graphics, 
     "2 run in 0. s, 1 failed", 
-    "anotherTest - Failed AssertEquals[1, -1], gave -1"}], 
+    "mytests anotherTest - Failed AssertEquals[1, -1], gave -1"}], 
   RunTest[mytests]];
 ];
 
@@ -859,7 +859,7 @@ AddTest[testFormatTestResults, "testFormatAssertMessageExpectedMessage",
  AssertMatch[
    Column[{_Graphics, 
       "1 run in 0. s, 1 failed", 
-      "aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
+      "mytests aTest - Failed AssertMessage[Drop::drop, Drop[{1}, 1]], gave {}"}], 
    RunTest[mytests]];
 ];
 AddTest[testFormatTestResults, "testFormatAssertNoMessage", 
@@ -870,7 +870,7 @@ AddTest[testFormatTestResults, "testFormatAssertNoMessage",
   AssertMatch[
    Column[{_Graphics, 
       "1 run in 0. s, 1 failed", 
-      "aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
+      "mytests aTest - Failed AssertNoMessage[Message[eMUnit`PackageTests`mess::aMessage]],\
  gave {HoldForm[eMUnit`PackageTests`mess::aMessage]}"}], 
    formattedResult];
 ]];
@@ -894,8 +894,10 @@ AddTest[testFormatTestResults, "testFormatTestResultSubsuites",
   AssertMatch[
    Column[{_Graphics, 
     "5 run in 0. s, 2 failed", 
-    "test2.2 - Failed AssertEquals[1, -1], gave -1",
-    "test3.1 - Failed AssertTrue[1 < 0], gave False"}], 
+    SymbolName@level1 <> " " <> SymbolName@level2 <> 
+      " test2.2 - Failed AssertEquals[1, -1], gave -1",
+    SymbolName@level1 <> " " <> SymbolName@level2 <> " " <> SymbolName@level3 <> 
+      " test3.1 - Failed AssertTrue[1 < 0], gave False"}], 
    formattedResult];
 ]];
 
