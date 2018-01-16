@@ -832,26 +832,28 @@ AddTest[testTearDown, "Hierarchical suites runs Tear Down 2 levels down after fa
  ]];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Test formatTestResult*)
 
 
 AddSuite[runTests, testFormatTestResults];
 
 
-AddTest[testFormatTestResults, "testFormatSingleSuccessfulTestResult", 
+AddTest[testFormatTestResults, "Single success", 
   AddTest[mytests, "aTest", AssertEquals[1, 1]];
   AssertMatch[Column[{_Graphics, "1 run in 0. s, 0 failed"}], 
    RunTest[mytests, "aTest"]];
 ];
 
-AddTest[testFormatTestResults, "testFormatTwoSuccessfulTestResult", 
+
+AddTest[testFormatTestResults, "Two successes", 
   AddTest[mytests, "aTest", AssertEquals[1, 1]];
   AddTest[mytests, "anotherTest", AssertEquals[1, 1]];
   AssertMatch[Column[{_Graphics, "2 run in 0. s, 0 failed"}], RunTest[mytests]]
 ];
 
-AddTest[testFormatTestResults, "testFormatSingleFailedTestResult", 
+
+AddTest[testFormatTestResults, "Single failure", 
   AddTest[mytests, "aTest", AssertTrue[False]];
   AssertMatch[
    Column[{_Graphics, 
@@ -860,7 +862,8 @@ AddTest[testFormatTestResults, "testFormatSingleFailedTestResult",
    RunTest[mytests]];
 ];
 
-AddTest[testFormatTestResults, "testFormatOneEachTestResult", 
+
+AddTest[testFormatTestResults, "One success, one failure", 
  AddTest[mytests, "aTest", AssertEquals[1, 1]];
  AddTest[mytests, "anotherTest", AssertEquals[1, -1]];
  AssertMatch[
@@ -946,6 +949,18 @@ AddTest[testFormatTestResults, "testFormatHierarchicalTestResultSubsuites",
     "         test3.2 0.00"
     }], 
    formattedResult];
+]];
+
+
+AddTest[testFormatTestResults, "Check Set Up and Tear Down not counted as tests",
+ Module[{i = 0},
+  AddTest[mytests, "Set Up", i++];
+  AddTest[mytests, "Tear Down", i++];
+  AddTest[mytests, "aTest", i++];
+  AddTest[mytests, "anotherTest", i++];
+  AssertMatch[Column[{_Graphics, "2 run in 0. s, 0 failed"}], 
+   RunTest[mytests]];
+  AssertEquals[6, i];
 ]];
 
 

@@ -21,7 +21,5 @@ go through UnitTest to get ideas (catch errors from tests? time/memoryConstraine
 
 --- Bugs ---
 
-bug? counting teardown in number of tests run?
-
 bug? something to do with earlier definition of function more permissive and not cleared?
 testIsCorrectExtraVectors - Failed AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]], gave HoldComplete[AssertEquals[False, isCorrectExtraVectors$36936[{{1, 2}}]]]
