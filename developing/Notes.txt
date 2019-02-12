@@ -1,5 +1,7 @@
 --- ToDo ---
 
+option to use AbsoluteTiming instead of Timing
+
 proper error message when wrong option given to RunTest[__, ReportMethod -> opt]
 
 Check errors in AddTest is caught by our testing

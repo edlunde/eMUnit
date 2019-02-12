@@ -265,7 +265,7 @@ BeginSubsuite[subsuite_Symbol] :=
 (*RunTest*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*RunTest*)
 
 
@@ -274,10 +274,10 @@ RunTest[opts : OptionsPattern[]] :=
  runIfSuiteSet[RunTest[currentSuite[], opts]]
 RunTest[suite_Symbol, opts : OptionsPattern[]] := 
  formatTestResult[runTest[suite], opts]
-RunTest[stringPattern_?isStringPatternQ, opts : OptionsPattern[]] := 
+RunTest[stringPattern_(*?isStringPatternQ*), opts : OptionsPattern[]] := 
  runIfSuiteSet[RunTest[currentSuite[], stringPattern, opts]]
 
-RunTest[suite_Symbol, stringPattern_?isStringPatternQ, opts : OptionsPattern[]] /; 
+RunTest[suite_Symbol, stringPattern_(*?isStringPatternQ*), opts : OptionsPattern[]] /; 
     testExists[suite, stringPattern] := 
  formatTestResult[runTest[suite, #] & /@ selectTests[suite, stringPattern], opts]
 selectTests[suite_Symbol, pattern_] := 
@@ -286,7 +286,7 @@ testExists[suite_Symbol, pattern_] :=
   If[Length[selectTests[suite, pattern]] > 0, True, 
      Message[eMUnitMessages::nonexistentTest, suite, pattern]; False]
 eMUnitMessages::nonexistentTest = "No test in suite '`1`' matches '`2`'";
-isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]
+(*isStringPatternQ[expr_] := MemberQ[{String, StringExpression}, Head[expr]]*)
 
 runTest[suite_Symbol] := runTest[suite, #] & /@ ListTests[suite]
 runTest[suite_Symbol, name_] := Module[{result, time},
